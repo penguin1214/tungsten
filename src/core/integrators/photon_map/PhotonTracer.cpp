@@ -252,6 +252,8 @@ Vec3f PhotonTracer::traceSensorPath(Vec2u pixel, const KdTree<Photon> &surfaceTr
     _mailIdx++;
 
     PositionSample point;
+    // cam().samplePosition & cam().sampleDirection() returns false?
+    // should return true?
     if (!_scene->cam().samplePosition(sampler, point))
         return Vec3f(0.0f);
     DirectionSample direction;
@@ -260,7 +262,7 @@ Vec3f PhotonTracer::traceSensorPath(Vec2u pixel, const KdTree<Photon> &surfaceTr
 
     Vec3f throughput = point.weight*direction.weight;
     Ray ray(point.p, direction.d);
-    ray.setPrimaryRay(true);
+    ray.setPrimaryRay(true);    // set is primary
 
     IntersectionTemporary data;
     IntersectionInfo info;
@@ -348,6 +350,7 @@ Vec3f PhotonTracer::traceSensorPath(Vec2u pixel, const KdTree<Photon> &surfaceTr
         if (!didHit || !includeSurfaces)
             break;
 
+        // surface
         const Bsdf &bsdf = *info.bsdf;
 
         SurfaceScatterEvent event = makeLocalScatterEvent(data, info, ray, &sampler);
@@ -368,7 +371,7 @@ Vec3f PhotonTracer::traceSensorPath(Vec2u pixel, const KdTree<Photon> &surfaceTr
 
             throughput *= event.weight;
         }
-
+        // check if in medium or out
         bool geometricBackside = (wo.dot(info.Ng) < 0.0f);
         medium = info.primitive->selectMedium(medium, geometricBackside);
 

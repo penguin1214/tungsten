@@ -84,6 +84,7 @@ public:
 
 class PhotonTracer : public TraceBase
 {
+    // private, photon map related
     PhotonMapSettings _settings;
     uint32 _mailIdx;
     std::unique_ptr<const Photon *[]> _photonQuery;
@@ -103,12 +104,14 @@ public:
     void evalPrimaryRays(const PhotonBeam *beams, const PhotonPlane0D *planes0D, const PhotonPlane1D *planes1D,
             uint32 start, uint32 end, float radius, const Ray *depthBuffer, PathSampleGenerator &sampler, float scale);
 
+    // ray tracing, from camera sensor
     Vec3f traceSensorPath(Vec2u pixel, const KdTree<Photon> &surfaceTree,
             const KdTree<VolumePhoton> *mediumTree, const Bvh::BinaryBvh *mediumBvh, const GridAccel *mediumGrid,
             const PhotonBeam *beams, const PhotonPlane0D *planes0D, const PhotonPlane1D *planes1D, PathSampleGenerator &sampler,
             float gatherRadius, float volumeGatherRadius,
             PhotonMapSettings::VolumePhotonType photonType, Ray &depthRay, bool useFrustumGrid);
 
+    // photon tracing, from light source
     void tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhotonRange &volumeRange,
             PathPhotonRange &pathRange, PathSampleGenerator &sampler);
 };

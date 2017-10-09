@@ -9,15 +9,18 @@
 
 namespace Tungsten {
 
+// capacity of a photon map
 template<typename PhotonType>
 class PhotonRange
 {
-    PhotonType *_dst;
+    // private
+    PhotonType *_dst;   // place to be stored
     uint32 _start;
-    uint32 _next;
+    uint32 _next;   // stride to next
     uint32 _end;
 
 public:
+    /// constructors
     PhotonRange()
     : _dst(nullptr), _start(0), _next(0), _end(0)
     {
@@ -31,6 +34,7 @@ public:
     {
     }
 
+    /// public methods
     PhotonType &addPhoton()
     {
         return _dst[_next++];

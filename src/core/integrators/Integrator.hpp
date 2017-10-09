@@ -46,6 +46,7 @@ public:
     bool resumeRender(Scene &scene);
     virtual bool supportsResumeRender() const;
 
+    // ???
     bool done() const
     {
         return _currentSpp >= _nextSpp;

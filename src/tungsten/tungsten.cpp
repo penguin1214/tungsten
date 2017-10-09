@@ -1,3 +1,6 @@
+/*
+ * SPP: sample per pixel
+ */
 #include "Version.hpp"
 #include "Shared.hpp"
 
@@ -16,6 +19,7 @@ int main(int argc, const char *argv[])
         std::exit(0);
     }
 
+    /// TODO
     renderer.setup();
 
     while (renderer.renderScene());

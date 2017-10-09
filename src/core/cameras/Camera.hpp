@@ -59,7 +59,7 @@ protected:
     double _colorBufferWeight;
 
     std::unique_ptr<AtomicFramebuffer> _splatBuffer;
-    double _splatWeight;
+    double _splatWeight;    // for what ?
 
 private:
     void precompute();

@@ -26,6 +26,7 @@ PhotonMapIntegrator::~PhotonMapIntegrator()
 {
 }
 
+// does compute overlap triangles?
 void PhotonMapIntegrator::diceTiles()
 {
     for (uint32 y = 0; y < _h; y += TileSize) {
@@ -92,6 +93,7 @@ void PhotonMapIntegrator::tracePixels(uint32 tileId, uint32 threadId, float surf
 {
     int spp = _nextSpp - _currentSpp;
 
+    // ray tracing
     ImageTile &tile = _tiles[tileId];
     for (uint32 y = 0; y < tile.h; ++y) {
         for (uint32 x = 0; x < tile.w; ++x) {
@@ -100,6 +102,7 @@ void PhotonMapIntegrator::tracePixels(uint32 tileId, uint32 threadId, float surf
 
             Ray dummyRay;
             Ray *depthRay = _depthBuffer ? &_depthBuffer[pixel.x() + pixel.y()*_w] : &dummyRay;
+            // super sampling
             for (int i = 0; i < spp; ++i) {
                 tile.sampler->startPath(pixelIndex, _currentSpp + i);
                 Vec3f c = _tracers[threadId]->traceSensorPath(pixel,
@@ -489,6 +492,7 @@ void PhotonMapIntegrator::teardownAfterRender()
     _volumeBvh.reset();
 }
 
+// completionCallback is a null function
 void PhotonMapIntegrator::renderSegment(std::function<void()> completionCallback)
 {
     using namespace std::placeholders;
@@ -509,6 +513,7 @@ void PhotonMapIntegrator::renderSegment(std::function<void()> completionCallback
         _tiles.size(), [](){}
     ));
 
+    // lambda
     if (_useFrustumGrid) {
         ThreadUtils::pool->yield(*ThreadUtils::pool->enqueue(
             [&](uint32 tracerId, uint32 numTracers, uint32) {

@@ -270,6 +270,8 @@ public:
             writeLogLine("Starting render...");
             Timer timer, checkpointTimer;
             double totalElapsed = 0.0;
+
+            /// RENDER
             while (!integrator.done()) {
                 {
                     std::unique_lock<std::mutex> lock(_statusMutex);
