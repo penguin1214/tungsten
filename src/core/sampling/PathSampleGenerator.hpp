@@ -9,6 +9,7 @@
 
 namespace Tungsten {
 
+/* Generate light ray for intersection points. */
 class PathSampleGenerator
 {
 public:

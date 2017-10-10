@@ -63,7 +63,9 @@ Scene::Scene(const Path &srcDir,
 template<typename T>
 std::shared_ptr<T> instantiate(JsonPtr value, const Scene &scene)
 {
+	/// 
     auto result = StringableEnum<std::function<std::shared_ptr<T>()>>(value.getRequiredMember("type")).toEnum()();
+	/// [ void Scene::fromJson(JsonPtr value, const Scene &scene) ]
     result->fromJson(value, scene);
     return result;
 }
@@ -222,10 +224,12 @@ void Scene::merge(Scene scene)
         addPrimitive(m);
 }
 
+/// TODO : IO
 void Scene::fromJson(JsonPtr value, const Scene &scene)
 {
     JsonSerializable::fromJson(value, scene);
 
+	/// add media to current scene
     if (auto media = value["media"])
         for (unsigned i = 0; i < media.size(); ++i)
             _media.emplace_back(instantiate<Medium>(media[i], *this));
@@ -238,6 +242,7 @@ void Scene::fromJson(JsonPtr value, const Scene &scene)
 
     if (auto camera     = value["camera"    ]) _camera     = instantiate<Camera>(camera, *this);
     if (auto integrator = value["integrator"]) _integrator = instantiate<Integrator>(integrator, *this);
+	/// set spp
     if (auto renderer   = value["renderer"  ]) _rendererSettings.fromJson(renderer, *this);
 }
 
@@ -270,6 +275,7 @@ rapidjson::Value Scene::toJson(Allocator &allocator) const
 void Scene::loadResources()
 {
     for (const std::shared_ptr<Medium> &b : _media)
+		/// TODO
         b->loadResources();
     for (const std::shared_ptr<Bsdf> &b : _bsdfs)
         b->loadResources();
@@ -372,7 +378,10 @@ Scene *Scene::load(const Path &path, std::shared_ptr<TextureCache> cache)
     if (!cache)
         cache = std::make_shared<TextureCache>();
 
+	/// do scene default settings
     Scene *scene = new Scene(path.parent(), std::move(cache));
+
+	/// parse scene file!
     scene->fromJson(document, *scene);
     scene->setPath(path);
 

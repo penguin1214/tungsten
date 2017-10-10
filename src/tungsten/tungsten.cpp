@@ -22,6 +22,8 @@ int main(int argc, const char *argv[])
     /// TODO
     renderer.setup();
 
+	/// load scenes
+	/// render
     while (renderer.renderScene());
 
     return 0;

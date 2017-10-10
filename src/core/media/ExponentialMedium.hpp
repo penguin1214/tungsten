@@ -5,6 +5,10 @@
 
 namespace Tungsten {
 
+/// inherent
+/// @ std::shared_ptr<PhaseFunction> _phaseFunction;
+/// @ int _maxBounce;
+
 class ExponentialMedium : public Medium
 {
     Vec3f _materialSigmaA, _materialSigmaS;
@@ -15,7 +19,7 @@ class ExponentialMedium : public Medium
 
     Vec3f _unitFalloffDirection;
     Vec3f _sigmaA, _sigmaS;
-    Vec3f _sigmaT;
+    Vec3f _sigmaT;	// _sigmaA + _sigmaS
     bool _absorptionOnly;
 
     inline float density(Vec3f p) const;

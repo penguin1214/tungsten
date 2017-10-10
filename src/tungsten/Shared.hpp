@@ -149,6 +149,7 @@ public:
             std::exit(0);
         }
 
+		/// count  thread num
         if (_parser.isPresent(OPT_THREADS)) {
             int newThreadCount = std::atoi(_parser.param(OPT_THREADS).c_str());
             if (newThreadCount > 0)
@@ -159,12 +160,14 @@ public:
         if (_parser.isPresent(OPT_TIMEOUT))
             _timeout = StringUtils::parseDuration(_parser.param(OPT_TIMEOUT));
 
+		/// embree RTCDevice
         EmbreeUtil::initDevice();
 
 #ifdef OPENVDB_AVAILABLE
         openvdb::initialize();
 #endif
 
+		/// Initiate thread pool
         ThreadUtils::startThreads(_threadCount);
 
         if (_parser.isPresent(OPT_OUTPUT_DIRECTORY)) {
@@ -175,7 +178,9 @@ public:
                 FileUtils::createDirectory(_outputDirectory, true);
         }
 
+		// enqueue scene files
         for (const std::string &p : _parser.operands())
+			// TODO: std::deque
             _status.queuedScenes.emplace_back(p);
     }
 
@@ -197,6 +202,9 @@ public:
         writeLogLine(tfm::format("Loading scene '%s'...", currentScene));
         try {
             std::unique_lock<std::mutex> lock(_sceneMutex);
+			/// bind current scene to renderer
+			/// PARSE FILE
+			// Scene class is used to parse scene files!
             _scene.reset(Scene::load(Path(currentScene)));
             _scene->loadResources();
         } catch (const JsonLoadException &e) {

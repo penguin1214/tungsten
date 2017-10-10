@@ -30,6 +30,7 @@
 
 namespace Tungsten {
 
+/* Base tracer class. */
 class TraceBase
 {
 protected:

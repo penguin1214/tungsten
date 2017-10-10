@@ -57,6 +57,7 @@ void ExponentialMedium::prepareForRender()
     _absorptionOnly = _sigmaS == 0.0f;
 }
 
+/// use density to weight coefficient
 Vec3f ExponentialMedium::sigmaA(Vec3f p) const
 {
     return density(p)*_sigmaA;
@@ -72,6 +73,7 @@ Vec3f ExponentialMedium::sigmaT(Vec3f p) const
     return density(p)*_sigmaT;
 }
 
+/// TODO
 inline float ExponentialMedium::density(Vec3f p) const
 {
     return std::exp(-_falloffScale*(p - _unitPoint).dot(_unitFalloffDirection));

@@ -426,19 +426,26 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
         PathPhotonRange &pathRange, PathSampleGenerator &sampler)
 {
     float lightPdf;
+
+	/// Primitive class owns two pointers to Medium: _intMedium & _extMedium
     const Primitive *light = chooseLightAdjoint(sampler, lightPdf);
     const Medium *medium = light->extMedium().get();
 
     PositionSample point;
+	/// generate a sample point on light source
     if (!light->samplePosition(sampler, point))
         return;
     DirectionSample direction;
+	/// generate a light direction
     if (!light->sampleDirection(sampler, point, direction))
         return;
 
     Ray ray(point.p, direction.d);
+	/// TODO: where does weights assigned?
+	/// throughput is initial photon power?
     Vec3f throughput(point.weight*direction.weight/lightPdf);
 
+	/// pathRange?
     if (!pathRange.full()) {
         PathPhoton &p = pathRange.addPhoton();
         p.pos = point.p;
@@ -450,9 +457,10 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
     IntersectionTemporary data;
     IntersectionInfo info;
     Medium::MediumState state;
-    state.reset();
+    state.reset();	/// start tracing
     Vec3f emission(0.0f);
 
+	/// ???
     bool tracePlanes = (_settings.volumePhotonType == PhotonMapSettings::VOLUME_PLANES) ||
                        (_settings.volumePhotonType == PhotonMapSettings::VOLUME_PLANES_1D);
     bool useLowOrder = _settings.lowOrderScattering || _settings.volumePhotonType != PhotonMapSettings::VOLUME_POINTS;
@@ -460,13 +468,19 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
     int bounceSinceSurface = 0;
     bool wasSpecular = true;
     bool didHit = _scene->intersect(ray, data, info);
+
+	/// for photon mapping, volume and surface are both handled in the while loop
     while ((didHit || medium) && bounce < _settings.maxBounces - 1) {
         bool hitSurface = didHit;
         bounce++;
         bounceSinceSurface++;
 
         Vec3f continuedThroughput = throughput;
+
+		/// VOLUME RENDERING!!!
         if (medium) {
+
+			/// medium sample point attributes
             MediumSample mediumSample;
             if (!medium->sampleDistance(sampler, ray, state, mediumSample))
                 break;
@@ -474,6 +488,7 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
             throughput *= mediumSample.weight;
             hitSurface = mediumSample.exited;
 
+			/// store photon in volume
             if (!hitSurface && (useLowOrder || bounceSinceSurface > 1) && !volumeRange.full()) {
                 VolumePhoton &p = volumeRange.addPhoton();
                 p.pos = mediumSample.p;

@@ -55,7 +55,7 @@ public:
 
     virtual Vec3f sigmaA(Vec3f p) const = 0;
     virtual Vec3f sigmaS(Vec3f p) const = 0;
-    virtual Vec3f sigmaT(Vec3f p) const = 0;
+    virtual Vec3f sigmaT(Vec3f p) const = 0;	// extinction
 
     virtual bool sampleDistance(PathSampleGenerator &sampler, const Ray &ray,
             MediumState &state, MediumSample &sample) const = 0;
