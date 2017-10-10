@@ -70,9 +70,13 @@ public:
         FAIL("StringifiedEnum has invalid value!");
     }
 
-    Enum &toEnum() { return _t; }
+    Enum &toEnum() {
+		return _t;
+	}
 
-    operator Enum() const { return _t; }
+    operator Enum() const {
+		return _t;
+	}	// cast operator (conversion function) https://stackoverflow.com/questions/44752735/operator-classname-c
 
     StringableEnum &operator=(JsonPtr value)
     {

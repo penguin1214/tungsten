@@ -15,7 +15,7 @@ Medium::Medium()
 
 void Medium::fromJson(JsonPtr value, const Scene &scene)
 {
-    JsonSerializable::fromJson(value, scene);
+    JsonSerializable::fromJson(value, scene);	// fetch name
 
     if (auto phase = value["phase_function"])
         _phaseFunction = scene.fetchPhase(phase);
