@@ -1,5 +1,11 @@
 /*
+ * Use RIGHT-HAND coordinate system.
+ * All primitives normalize to ([0,1], [0.1], [0,1])
  * SPP: sample per pixel
+ */
+
+/*
+ * int_medium vs. ext_medium???
  */
 #include "Version.hpp"
 #include "Shared.hpp"
@@ -8,23 +14,23 @@ using namespace Tungsten;
 
 int main(int argc, const char *argv[])
 {
-    CliParser parser("tungsten", "[options] scene1 [scene2 [scene3...]]");
+	CliParser parser("tungsten", "[options] scene1 [scene2 [scene3...]]");
 
-    StandaloneRenderer renderer(parser, std::cout);
+	StandaloneRenderer renderer(parser, std::cout);
 
-    parser.parse(argc, argv);
+	parser.parse(argc, argv);
 
-    if (parser.isPresent(OPT_VERSION)) {
-        std::cout << "tungsten, version " << VERSION_STRING << std::endl;
-        std::exit(0);
-    }
+	if (parser.isPresent(OPT_VERSION)) {
+		std::cout << "tungsten, version " << VERSION_STRING << std::endl;
+		std::exit(0);
+	}
 
-    /// TODO
-    renderer.setup();
+	/// TODO
+	renderer.setup();
 
 	/// load scenes
 	/// render
-    while (renderer.renderScene());
+	while (renderer.renderScene());
 
-    return 0;
+	return 0;
 }

@@ -40,7 +40,16 @@ Vec3f SmokeMedium::sigmaS(Vec3f p) const { return density(p) * _sigmaS; }
 Vec3f SmokeMedium::sigmaT(Vec3f p) const { return density(p) * _sigmaT; }
 
 bool SmokeMedium::sampleDistance(PathSampleGenerator &sampler, const Ray &ray,
-	MediumState &state, MediumSample &sample) const { return true; }
+	MediumState &state, MediumSample &sample) const {
+
+	if (state.bounce > _maxBounce) return false;
+
+	if (_absorptionOnly) {
+
+	}
+
+	return true;
+}
 bool SmokeMedium::invertDistance(WritablePathSampleGenerator &sampler, const Ray &ray, bool onSurface) const { return true; }
 Vec3f SmokeMedium::transmittance(PathSampleGenerator &sampler, const Ray &ray) const { return Vec3f(0.0); }
 float SmokeMedium::pdf(PathSampleGenerator &sampler, const Ray &ray, bool onSurface) const { return 0.0; }

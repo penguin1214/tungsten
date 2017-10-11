@@ -11,7 +11,7 @@ namespace Tungsten {
 
 class Ray
 {
-    Vec3f _pos;
+    Vec3f _pos;	// start point
     Vec3f _dir;
     float _nearT;
     float _farT;

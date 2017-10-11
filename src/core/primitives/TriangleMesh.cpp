@@ -299,6 +299,7 @@ void TriangleMesh::makeCone(float radius, float height)
 bool TriangleMesh::intersect(Ray &ray, IntersectionTemporary &data) const
 {
     RTCRay eRay(EmbreeUtil::convert(ray));
+	/// why only triangle mesh uses rtcIntersect() API?
     rtcIntersect(_scene, eRay);
     if (eRay.geomID != RTC_INVALID_GEOMETRY_ID) {
         ray.setFarT(eRay.tfar);

@@ -15,7 +15,7 @@ struct MediumSample
     Vec3f continuedWeight;
     float t;
     Vec3f weight;
-    float pdf;
+    float pdf;	// chances of a photon of light being scattered in a particular direction
     bool exited;
 };
 

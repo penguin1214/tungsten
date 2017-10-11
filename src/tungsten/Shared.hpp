@@ -245,6 +245,7 @@ public:
 			if (_parser.isPresent(OPT_SEED))
 				seed = std::atoi(_parser.param(OPT_SEED).c_str());
 
+			/// renderer has spp & spp_step attributes
 			int maxSpp = _scene->rendererSettings().spp();
 			{
 				std::unique_lock<std::mutex> lock(_sceneMutex);

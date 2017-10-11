@@ -7,7 +7,7 @@ namespace Tungsten {
 
 struct PhaseSample
 {
-    Vec3f w;
+    Vec3f w;	// outgoing direction
     Vec3f weight;
     float pdf;
 };
