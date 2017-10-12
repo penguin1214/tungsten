@@ -1,6 +1,7 @@
 /*
  * Use RIGHT-HAND coordinate system.
  * All primitives normalize to ([0,1], [0.1], [0,1])
+ * **ATTENTION** NOT CONSISTENT WITH PLAINGRID NOW!
  * SPP: sample per pixel
  */
 

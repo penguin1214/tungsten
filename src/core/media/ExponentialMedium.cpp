@@ -117,7 +117,7 @@ bool ExponentialMedium::sampleDistance(PathSampleGenerator &sampler, const Ray &
 
 	float maxT = ray.farT();
 	if (_absorptionOnly) {
-		if (maxT == Ray::infinity() && dx <= 0.0f)
+		if (maxT == Ray::infinity() && dx <= 0.0f/*?*/)
 			return false;
 		sample.t = maxT;
 		sample.weight = std::exp(-_sigmaT*densityIntegral(x, dx, ray.farT()));

@@ -199,6 +199,7 @@ public:
         return _timeout;
     }
 
+	/* "output_buffer" */
     const std::vector<OutputBufferSettings> &renderOutputs() const
     {
         return _outputs;

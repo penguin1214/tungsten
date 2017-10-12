@@ -10,6 +10,7 @@ namespace Tungsten {
 /*
  * Volume is an abstract class,
  * Only used as bounding box, to illustrate volume scale.
+ * It is normalized to ([0,1], [0.1], [0.1]) according to reference scale and grid scale.
  */
 class Volume : public Primitive {
 
@@ -18,12 +19,13 @@ private:
 	Vec3f _pos;
 	Vec3f _scale;
 	// area?
+	// scale factor?
 
 	// _proxy?
 	std::shared_ptr<Medium> _medium_ptr;	// unique_ptr?
 	std::shared_ptr<Bsdf> _bsdf;
 
-	Box3f _bounds;	// ??
+	Box3f _bounds;
 public:
 	Volume();
 	

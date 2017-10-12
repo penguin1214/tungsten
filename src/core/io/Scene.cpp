@@ -68,7 +68,7 @@ std::shared_ptr<T> instantiate(JsonPtr value, const Scene &scene)
 	/// CAST OBJECT TYPE HERE!!!
 	/// e.g "media" => SmokeMedium
 	auto result = StringableEnum<std::function<std::shared_ptr<T>()>>(value.getRequiredMember("type")).toEnum()();
-	/// WHAT IS CALLED IS DERIVED CLASS FUNCTION!
+	/// WHAT IS CALLED IS DERIVED CLASS FUNCTION: [class].fromJson()
 	/// parse parameter
 	result->fromJson(value, scene);
 	return result;
@@ -166,6 +166,11 @@ PathPtr Scene::fetchResource(JsonPtr value) const
 {
 	return fetchResource(value.cast<std::string>());
 }
+
+//float *Scene::fetchBinFile(const std::string &path) const {
+//
+//}
+
 
 const Primitive *Scene::findPrimitive(const std::string &name) const
 {

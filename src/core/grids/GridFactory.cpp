@@ -1,5 +1,6 @@
 #include "GridFactory.hpp"
 
+#include "PlainGrid.hpp"
 #include "VdbGrid.hpp"
 
 namespace Tungsten {
@@ -10,8 +11,13 @@ namespace Tungsten {
 #define OPENVDB_ENTRY
 #endif
 
+//DEFINE_STRINGABLE_ENUM(GridFactory, "grid", ({
+//    OPENVDB_ENTRY
+//}))
+
+/// Since no OPENVDB available at present
 DEFINE_STRINGABLE_ENUM(GridFactory, "grid", ({
-    OPENVDB_ENTRY
+	{"plain", std::make_shared<PlainGrid>},
 }))
 
 }

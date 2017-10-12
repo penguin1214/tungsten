@@ -39,9 +39,10 @@ void VoxelMedium::loadResources()
     _grid->loadResources();
 }
 
+///TODO
 bool VoxelMedium::isHomogeneous() const
 {
-    return true;
+    return true;	// should be hetergeneous
 }
 
 void VoxelMedium::prepareForRender()
@@ -107,11 +108,11 @@ bool VoxelMedium::sampleDistance(PathSampleGenerator &sampler, const Ray &ray,
 
     float maxT = ray.farT();
     Vec3f p = _worldToGrid*ray.pos();
-    Vec3f w = _worldToGrid.transformVector(ray.dir());
+    Vec3f w = _worldToGrid.transformVector(ray.dir());	// transform ray direction to grid coordinate
     float wPrime = w.length();
-    w /= wPrime;
+    w /= wPrime;	// normalize ray dir
     float t0 = 0.0f, t1 = maxT*wPrime;
-    if (!bboxIntersection(_gridBounds, p, w, t0, t1)) {
+    if (!bboxIntersection(_gridBounds, p/*ray origin*/, w/*ray dir*/, t0, t1)) {	// t0, t1 get updated to box intersection point
         sample.t = maxT;
         sample.weight = Vec3f(1.0f);
         sample.pdf = 1.0f;
@@ -121,7 +122,7 @@ bool VoxelMedium::sampleDistance(PathSampleGenerator &sampler, const Ray &ray,
 
     if (_absorptionOnly) {
         sample.t = maxT;
-        sample.weight = _grid->transmittance(sampler, p, w, t0, t1, _sigmaT/wPrime);
+        sample.weight = _grid->transmittance(sampler, p, w, t0, t1, _sigmaT/wPrime);	// transparency
         sample.pdf = 1.0f;
         sample.exited = true;
     } else {

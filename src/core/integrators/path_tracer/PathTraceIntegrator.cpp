@@ -140,15 +140,17 @@ void PathTraceIntegrator::renderTile(uint32 id, uint32 tileId)
         for (uint32 x = 0; x < tile.w; ++x) {
             Vec2u pixel(tile.x + x, tile.y + y);
             uint32 pixelIndex = pixel.x() + pixel.y()*_w;
+			/// ???
             uint32 variancePixelIndex = pixel.x()/VarianceTileSize + pixel.y()/VarianceTileSize*_varianceW;
 
             SampleRecord &record = _samples[variancePixelIndex];
             int spp = record.nextSampleCount;
             for (int i = 0; i < spp; ++i) {
                 tile.sampler->startPath(pixelIndex, record.sampleIndex + i);
+				/// trace
                 Vec3f c = _tracers[id]->traceSample(pixel, *tile.sampler);
 
-                record.addSample(c);
+                record.addSample(c);	/// ???
                 _scene->cam().colorBuffer()->addSample(pixel, c);
             }
         }
@@ -198,6 +200,8 @@ void PathTraceIntegrator::prepareForRender(TraceableScene &scene, uint32 seed)
     _varianceH = (_h + VarianceTileSize - 1)/VarianceTileSize;
     diceTiles();
     _samples.resize(_varianceW*_varianceH);
+
+	if (_scene->cam().medium().get()) _scene->cam().medium().get()->prepareForRender();
 }
 
 void PathTraceIntegrator::teardownAfterRender()

@@ -73,6 +73,7 @@ public:
     std::shared_ptr<Texture> fetchTexture(JsonPtr value, TexelConversion conversion) const;
     PathPtr fetchResource(const std::string &path) const;
     PathPtr fetchResource(JsonPtr v) const;
+	// float *fetchBinFile(const std::string &path) const;
 
     const Primitive *findPrimitive(const std::string &name) const;
 

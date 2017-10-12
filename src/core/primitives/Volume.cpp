@@ -19,7 +19,7 @@ Volume::Volume()
 /// Functions
 void Volume::fromJson(JsonPtr value, const Scene &scene) {
 	Primitive::fromJson(value, scene);
-	//TODO: attach data
+	// TODO: attach data
 	if (auto path = value["data_file"]) _path = scene.fetchResource(path);
 
 	if (auto medium = value["medium"]) {
@@ -30,7 +30,7 @@ void Volume::fromJson(JsonPtr value, const Scene &scene) {
 	if (auto bsdf = value["bsdf"]) _bsdf = scene.fetchBsdf(bsdf);
 }
 
-// TODO: check
+/// TODO: check
 bool Volume::intersect(Ray &ray, IntersectionTemporary &data) const {
 	Vec3f p = ray.pos() - _pos;
 	Vec3f d = ray.dir();

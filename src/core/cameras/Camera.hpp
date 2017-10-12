@@ -88,6 +88,7 @@ public:
 
     virtual float approximateFov() const = 0;
 
+	virtual void loadResources();
     virtual void prepareForRender();
     virtual void teardownAfterRender();
 

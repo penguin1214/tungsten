@@ -129,6 +129,10 @@ float Camera::directionPdf(const PositionSample &/*point*/, const DirectionSampl
     return 0.0f;
 }
 
+void Camera::loadResources() {
+	if (_medium) _medium->loadResources();
+}
+
 void Camera::prepareForRender()
 {
     precompute();

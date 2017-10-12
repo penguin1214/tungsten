@@ -185,6 +185,7 @@ void VdbGrid::loadResources()
     Vec3f diag = Vec3f(maxP - minP);
     float scale = 1.0f/diag.max();
     diag *= scale;
+	// center is center in bottom surface
     Vec3f center = Vec3f(minP)*scale + Vec3f(diag.x(), 0.0f, diag.z())*0.5f;
 
     std::cout << minP << " -> " << maxP << std::endl;
