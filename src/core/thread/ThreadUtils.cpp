@@ -19,6 +19,8 @@ uint32 idealThreadCount()
 {
     // std::thread::hardware_concurrency support is not great, so let's try
     // native APIs first
+
+#if 0
 #if _WIN32
     SYSTEM_INFO info;
     GetSystemInfo(&info);
@@ -35,6 +37,9 @@ uint32 idealThreadCount()
 
     // All attempts failed. Let's take a guess
     return 4;
+
+#endif
+	return 4;
 }
 
 void startThreads(int numThreads)

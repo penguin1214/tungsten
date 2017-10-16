@@ -130,7 +130,7 @@ float Camera::directionPdf(const PositionSample &/*point*/, const DirectionSampl
 }
 
 void Camera::loadResources() {
-	if (_medium) _medium->loadResources();
+	// if (_medium) _medium->loadResources();	// cause grid to be loaded twice
 }
 
 void Camera::prepareForRender()

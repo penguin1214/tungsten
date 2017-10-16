@@ -72,7 +72,7 @@ bool HomogeneousMedium::sampleDistance(PathSampleGenerator &sampler, const Ray &
     float maxT = ray.farT();
     if (_absorptionOnly) {
         if (maxT == Ray::infinity())
-            return false;
+            return false;	/// for medium, why ray.farT cannot be infinite?
         sample.t = maxT;
         sample.weight = FastMath::exp(-_sigmaT*maxT);
         sample.pdf = 1.0f;

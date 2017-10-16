@@ -13,6 +13,8 @@ namespace Tungsten {
 
 struct PhotonMapSettings : public TraceSettings
 {
+	/// ??
+	/// volume photons have different types
     enum VolumePhotonEnum
     {
         VOLUME_POINTS,

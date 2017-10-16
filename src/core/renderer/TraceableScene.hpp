@@ -133,6 +133,7 @@ public:
             rtcCommit(_scene);
         }
 
+		/// takes too much time here!
         _integrator.prepareForRender(*this, seed);
     }
 
@@ -172,6 +173,7 @@ public:
         info.primitive = nullptr;
         data.primitive = nullptr;
 
+		/// intersect() only handles surfaces
         if (_settings.useSceneBvh()) {
             IntersectionRay eRay(EmbreeUtil::convert(ray), data, ray, _userGeomId);
             rtcIntersect(_scene, eRay);

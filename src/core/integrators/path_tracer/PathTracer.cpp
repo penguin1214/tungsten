@@ -39,7 +39,7 @@ Vec3f PathTracer::traceSample(Vec2u pixel, PathSampleGenerator &sampler)
 	IntersectionInfo info;
 	Vec3f emission(0.0f);
 	/// What if multiple medium?
-	const Medium *medium = _scene->cam().medium().get();
+	const Medium *medium = _scene->cam().medium().get();	// what for????
 
 	bool recordedOutputValues = false;
 	float hitDistance = 0.0f;
@@ -49,16 +49,18 @@ Vec3f PathTracer::traceSample(Vec2u pixel, PathSampleGenerator &sampler)
 	bool didHit = _scene->intersect(ray, data, info);
 	bool wasSpecular = true;
 	while ((didHit || medium) && bounce < _settings.maxBounces) {
-		bool hitSurface = true;	// if do surface render
+		bool hitSurface = true;	// whether exited volume
 		if (medium) {
 			if (!medium->sampleDistance(sampler, ray, state, mediumSample))
 				return emission;
 			throughput *= mediumSample.weight;
-			hitSurface = mediumSample.exited;
+			hitSurface = mediumSample.exited;	/// !
 			if (hitSurface && !didHit)
 				break;
 		}
 
+		/// do scattering
+		/// if not exited volume yet, do volume scattering, else do surface scattering
 		if (hitSurface) {
 			/// why farT()
 			hitDistance += ray.farT();	// hitDistance is 0 for primary ray
@@ -68,6 +70,7 @@ Vec3f PathTracer::traceSample(Vec2u pixel, PathSampleGenerator &sampler)
 			bool terminate = !handleSurface(surfaceEvent, data, info, medium, bounce, false,
 					_settings.enableLightSampling, ray, throughput, emission, wasSpecular, state, &transmittance);
 
+			/// ???
 			if (_trackOutputValues && !recordedOutputValues && (!wasSpecular || terminate)) {
 				if (_scene->cam().depthBuffer())
 					_scene->cam().depthBuffer()->addSample(pixel, hitDistance);
@@ -99,7 +102,7 @@ Vec3f PathTracer::traceSample(Vec2u pixel, PathSampleGenerator &sampler)
 		if (throughput.max() == 0.0f)	// nothing left after absorption
 			break;
 
-		float roulettePdf = std::abs(throughput).max();
+		float roulettePdf = std::abs(throughput).max();	/// ???
 		if (bounce > 2 && roulettePdf < 0.1f) {
 			if (sampler.nextBoolean(roulettePdf))
 				throughput /= roulettePdf;	// bounce!
@@ -117,8 +120,9 @@ Vec3f PathTracer::traceSample(Vec2u pixel, PathSampleGenerator &sampler)
 			didHit = _scene->intersect(ray, data, info);
 		// recursive bounce
 	}
-	/// ???
+
 	if (bounce >= _settings.minBounces && bounce < _settings.maxBounces)
+		/// ???
 		handleInfiniteLights(data, info, _settings.enableLightSampling, ray, throughput, wasSpecular, emission);
 	if (std::isnan(throughput.sum() + emission.sum()))
 		return nanEnvDirColor;
@@ -132,7 +136,6 @@ Vec3f PathTracer::traceSample(Vec2u pixel, PathSampleGenerator &sampler)
 			_scene->cam().albedoBuffer()->addSample(pixel, info.primitive->evalDirect(data, info));
 	}
 
-	//std::cout << emission << std::endl;
 	return emission;
 
 	} catch (std::runtime_error &e) {

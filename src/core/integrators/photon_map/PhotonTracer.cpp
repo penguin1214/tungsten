@@ -275,6 +275,7 @@ Vec3f PhotonTracer::traceSensorPath(Vec2u pixel, const KdTree<Photon> &surfaceTr
 
 	depthRay = ray;
 
+	/// why ray tracing path need bouncing?
 	while ((medium || didHit) && bounce < _settings.maxBounces) {
 		bounce++;
 
@@ -427,8 +428,10 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
 {
 	float lightPdf;
 
-	/// Primitive class owns two pointers to Medium: _intMedium & _extMedium
+	/// sample light?
 	const Primitive *light = chooseLightAdjoint(sampler, lightPdf);
+	/// Primitive class owns two pointers to Medium: _intMedium & _extMedium
+	/// light.extMedium?
 	const Medium *medium = light->extMedium().get();
 
 	PositionSample point;
@@ -460,25 +463,25 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
 	state.reset();	/// start tracing
 	Vec3f emission(0.0f);
 
-	/// ??? low order
+	/// ??? tracePlanes???
+	/// what is volume photon type
 	bool tracePlanes = (_settings.volumePhotonType == PhotonMapSettings::VOLUME_PLANES) ||
 					   (_settings.volumePhotonType == PhotonMapSettings::VOLUME_PLANES_1D);
 	bool useLowOrder = _settings.lowOrderScattering || _settings.volumePhotonType != PhotonMapSettings::VOLUME_POINTS;
 	int bounce = 0;
 	int bounceSinceSurface = 0;
 	bool wasSpecular = true;
-	/// TODO : volume bbox
+	/// didHit should only consider surface intersection?
 	bool didHit = _scene->intersect(ray, data, info);
 
 	/// for photon mapping, volume and surface are both handled in the while loop
 	while ((didHit || medium) && bounce < _settings.maxBounces - 1) {
-		bool hitSurface = didHit;
+		bool hitSurface = didHit;	// whether exit volume, if any
 		bounce++;
 		bounceSinceSurface++;
 
 		Vec3f continuedThroughput = throughput;
 
-		/// VOLUME RENDERING!!!
 		if (medium) {
 
 			/// medium sample point attributes
@@ -491,11 +494,12 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
 			hitSurface = mediumSample.exited;
 
 			/// store photon in volume
-			/// store more than once bounce photons
+			/// store more than once bounce photons, why?
 			if (!hitSurface && (useLowOrder || bounceSinceSurface > 1) && !volumeRange.full()) {
 				VolumePhoton &p = volumeRange.addPhoton();
 				p.pos = mediumSample.p;
 				p.dir = ray.dir();
+				/// do not use constant power? and do not use rolette to decide if scatter or absorb
 				p.power = throughput;
 				p.bounce = bounce;
 			}
@@ -504,11 +508,13 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
 			if ((!hitSurface || tracePlanes) && !pathRange.full()) {
 				pathRange.nextPtr()[-1].sampledLength = mediumSample.continuedT;
 				PathPhoton &p = pathRange.addPhoton();
+				std::cout << "path photon <1> added" << std::endl;
 				p.pos = mediumSample.p;
 				p.power = continuedThroughput;
 				p.setPathInfo(bounce, false);
 			}
 
+			/// continuedRay is used for volume scatter
 			Ray continuedRay;
 			PhaseSample phaseSample;
 			if (!hitSurface || tracePlanes) {
@@ -518,9 +524,8 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
 				continuedRay.setPrimaryRay(false);
 			}
 
-			// cast continued ray, why???
 			if (!hitSurface) {
-				ray = continuedRay;
+				ray = continuedRay;	/// ray direction changed!
 				throughput *= phaseSample.weight;
 			} else if (tracePlanes) {
 				Medium::MediumState continuedState = state;
@@ -529,6 +534,7 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
 				if (!pathRange.full()) {
 					pathRange.nextPtr()[-1].sampledLength = mediumSample.continuedT;
 					PathPhoton &p = pathRange.addPhoton();
+					std::cout << "path photon <2> added" << std::endl;
 					p.pos = mediumSample.p;
 					p.power = throughput*mediumSample.weight*phaseSample.weight;
 					p.setPathInfo(bounce + 1, true);
@@ -537,32 +543,39 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
 		}
 
 		//////////////////////////////////////////////////////////////////////////
-		if (hitSurface) {
-			if (!info.bsdf->lobes().isPureSpecular() && !surfaceRange.full()) {
-				Photon &p = surfaceRange.addPhoton();
-				p.pos = info.p;
-				p.dir = ray.dir();
-				p.power = throughput*std::abs(info.Ns.dot(ray.dir())/info.Ng.dot(ray.dir()));
-				p.bounce = bounce;
-			}
-			if (!pathRange.full()) {
-				PathPhoton &p = pathRange.addPhoton();
-				p.pos = info.p;
-				p.power = continuedThroughput;
-				p.setPathInfo(bounce, true);
+		/// store surface photon
+		/// since we may have no surfaces, must check didHit before hitSurface
+		if (didHit) {
+			if (hitSurface) {
+				if (!info.bsdf->lobes().isPureSpecular() && !surfaceRange.full()) {
+					Photon &p = surfaceRange.addPhoton();
+					p.pos = info.p;
+					p.dir = ray.dir();
+					p.power = throughput*std::abs(info.Ns.dot(ray.dir()) / info.Ng.dot(ray.dir()));
+					p.bounce = bounce;
+				}
+				if (!pathRange.full()) {
+					PathPhoton &p = pathRange.addPhoton();
+					std::cout << "path photon <3> added" << std::endl;
+					p.pos = info.p;
+					p.power = continuedThroughput;
+					p.setPathInfo(bounce, true);
+				}
 			}
 		}
 
 		if (volumeRange.full() && surfaceRange.full() && pathRange.full())
 			break;
 
-		/// scatter
-		if (hitSurface) {
-			event = makeLocalScatterEvent(data, info, ray, &sampler);
-			if (!handleSurface(event, data, info, medium, bounce,
+		if (didHit) {
+			/// scatter
+			if (hitSurface) {
+				event = makeLocalScatterEvent(data, info, ray, &sampler);
+				if (!handleSurface(event, data, info, medium, bounce,
 					true, false, ray, throughput, emission, wasSpecular, state))
-				break;
-			bounceSinceSurface = 0;
+					break;
+				bounceSinceSurface = 0;
+			}
 		}
 
 		if (throughput.max() == 0.0f)

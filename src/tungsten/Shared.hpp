@@ -206,7 +206,7 @@ public:
 			/// PARSE FILE
 			// Scene class is used to parse scene files!
 			_scene.reset(Scene::load(Path(currentScene)));
-			_scene->loadResources();
+			_scene->loadResources();	// do nothing?
 		} catch (const JsonLoadException &e) {
 			std::cerr << e.what() << std::endl;
 

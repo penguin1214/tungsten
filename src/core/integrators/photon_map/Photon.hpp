@@ -5,6 +5,7 @@
 
 namespace Tungsten {
 
+/// Only VolumePhoton is derived class of Photon!
 struct Photon
 {
     uint32 splitData;
@@ -47,6 +48,7 @@ struct VolumePhoton : public Photon
     float radiusSq;
 };
 
+/// ??? what is path photon
 struct PathPhoton
 {
     Vec3f pos;

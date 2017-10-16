@@ -511,6 +511,7 @@ bool TraceBase::handleVolume(PathSampleGenerator &sampler, MediumSample &mediumS
     return true;
 }
 
+/* do surface scattering */
 bool TraceBase::handleSurface(SurfaceScatterEvent &event, IntersectionTemporary &data,
                               IntersectionInfo &info, const Medium *&medium,
                               int bounce, bool adjoint, bool enableLightSampling, Ray &ray,
@@ -520,7 +521,7 @@ bool TraceBase::handleSurface(SurfaceScatterEvent &event, IntersectionTemporary 
     const Bsdf &bsdf = *info.bsdf;
 
     // For forward events, the transport direction does not matter (since wi = -wo)
-    Vec3f transparency = bsdf.eval(event.makeForwardEvent(), false);
+    Vec3f transparency = bsdf.eval(event.makeForwardEvent(), false);	/// ???
     float transparencyScalar = transparency.avg();
 
     Vec3f wo;
@@ -531,6 +532,7 @@ bool TraceBase::handleSurface(SurfaceScatterEvent &event, IntersectionTemporary 
         event.sampledLobe = BsdfLobes::ForwardLobe;
         throughput *= event.weight;
     } else {
+		/// direct lighting?
         if (!adjoint) {
             if (enableLightSampling && bounce < _settings.maxBounces - 1)
                 emission += estimateDirect(event, medium, bounce + 1, ray, transmittance)*throughput;

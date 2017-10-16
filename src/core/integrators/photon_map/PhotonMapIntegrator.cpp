@@ -66,6 +66,7 @@ void PhotonMapIntegrator::tracePhotons(uint32 taskId, uint32 numSubTasks, uint32
 	uint32 totalPathsCast = 0;
 	for (uint32 i = 0; i < photonsToCast; ++i) {
 		sampler.startPath(0, sampleBase + photonBase + i);
+
 		_tracers[threadId]->tracePhotonPath(
 			data.surfaceRange,
 			data.volumeRange,
@@ -511,6 +512,8 @@ void PhotonMapIntegrator::renderSegment(std::function<void()> completionCallback
 
 		buildPhotonDataStructures(1.0f);
 	}
+
+	std::cout << "photon map stored." << std::endl;
 
 	ThreadUtils::pool->yield(*ThreadUtils::pool->enqueue(
 		std::bind(&PhotonMapIntegrator::tracePixels, this, _1, _3, _settings.gatherRadius, _settings.volumeGatherRadius),

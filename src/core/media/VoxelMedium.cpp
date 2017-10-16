@@ -113,6 +113,7 @@ bool VoxelMedium::sampleDistance(PathSampleGenerator &sampler, const Ray &ray,
     w /= wPrime;	// normalize ray dir
     float t0 = 0.0f, t1 = maxT*wPrime;
     if (!bboxIntersection(_gridBounds, p/*ray origin*/, w/*ray dir*/, t0, t1)) {	// t0, t1 get updated to box intersection point
+		/// do not intersect volume, no absorption and scatter and emission
         sample.t = maxT;
         sample.weight = Vec3f(1.0f);
         sample.pdf = 1.0f;
@@ -124,7 +125,7 @@ bool VoxelMedium::sampleDistance(PathSampleGenerator &sampler, const Ray &ray,
         sample.t = maxT;
         sample.weight = _grid->transmittance(sampler, p, w, t0, t1, _sigmaT/wPrime);	// transparency
         sample.pdf = 1.0f;
-        sample.exited = true;
+        sample.exited = true;	/// ???
     } else {
         int component = sampler.nextDiscrete(3);
         float sigmaTc = _sigmaT[component];
