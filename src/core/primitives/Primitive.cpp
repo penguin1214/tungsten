@@ -6,6 +6,11 @@
 #include "io/JsonObject.hpp"
 #include "io/Scene.hpp"
 
+/* 
+ * data.Ng: unnormalized geometric normal
+ * info.Ng: normalized geometric normal
+ * info.Ns: shading normal
+ */
 namespace Tungsten {
 
 std::shared_ptr<Bsdf> Primitive::_defaultBsdf = std::make_shared<LambertBsdf>();
@@ -125,14 +130,16 @@ void Primitive::teardownAfterRender()
 void Primitive::setupTangentFrame(const IntersectionTemporary &data,
         const IntersectionInfo &info, TangentFrame &dst) const
 {
+	// frame.normal is always the shading normal (info.Ns), without bump map
     const Texture *bump = info.bsdf ? info.bsdf->bump().get() : nullptr;
 
     if ((!bump || bump->isConstant()) && !info.bsdf->lobes().isAnisotropic()) {
         dst = TangentFrame(info.Ns);
         return;
     }
-    Vec3f T, B, N(info.Ns);
+    Vec3f T, B, N(info.Ns);	// tangent, bitangent, normal
     if (!tangentSpace(data, info, T, B)) {
+		// normal in X-Y plane
         dst = TangentFrame(info.Ns);
         return;
     }
@@ -153,6 +160,7 @@ void Primitive::setupTangentFrame(const IntersectionTemporary &data,
     }
     T = (T - N.dot(T)*N);
     if (T == 0.0f) {
+		// normal in X-Y plane
         dst = TangentFrame(info.Ns);
         return;
     }

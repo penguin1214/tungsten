@@ -15,6 +15,8 @@ namespace MeshIO {
 
 bool load(const Path &path, std::vector<Vertex> &verts, std::vector<TriangleI> &tris);
 bool save(const Path &path, const std::vector<Vertex> &verts, const std::vector<TriangleI> &tris);
+std::vector<Vec3f> loadVec3Bin(std::string fname, int gridx, int gridy, int gridz);
+std::vector<Vec3f> loadGradient(std::string fname);
 
 }
 

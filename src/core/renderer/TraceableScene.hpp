@@ -168,6 +168,7 @@ public:
         return eRay.ray.farT();
     }
 
+	/// should be modified to handle volume
     bool intersect(Ray &ray, IntersectionTemporary &data, IntersectionInfo &info) const
     {
         info.primitive = nullptr;
@@ -186,6 +187,7 @@ public:
             info.p = ray.pos() + ray.dir()*ray.farT();
             info.w = ray.dir();
             info.epsilon = DefaultEpsilon;
+			// bsdf.lobe()?
             data.primitive->intersectionInfo(data, info);
             return true;
         } else {

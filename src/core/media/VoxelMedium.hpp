@@ -1,9 +1,15 @@
+/*
+ * NOTE:
+ * using RAY-MARCHING to do inportance sampling introduces bias!
+ */
+
 #ifndef VOXELMEDIUM_HPP_
 #define VOXELMEDIUM_HPP_
 
 #include "Medium.hpp"
 
 #include "grids/Grid.hpp"
+#include "../common.hpp"
 
 namespace Tungsten {
 
@@ -33,6 +39,7 @@ public:
     virtual Vec3f sigmaA(Vec3f p) const override;
     virtual Vec3f sigmaS(Vec3f p) const override;
     virtual Vec3f sigmaT(Vec3f p) const override;
+	//virtual std::shared_ptr<PlainGrid> grid() override;
 
     virtual bool sampleDistance(PathSampleGenerator &sampler, const Ray &ray,
             MediumState &state, MediumSample &sample) const override;

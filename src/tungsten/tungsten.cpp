@@ -10,6 +10,7 @@
  */
 #include "Version.hpp"
 #include "Shared.hpp"
+#include "io/MeshIO.hpp"
 
 using namespace Tungsten;
 

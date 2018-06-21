@@ -17,6 +17,10 @@
 #include <unordered_map>
 #include <iostream>
 
+#define USE_GRADIENT_NORMAL 0
+#define USE_COUNTER_CLOCKWISE 1	// correct
+#define DEBUG_TRIANGLE_MESH 0
+
 namespace Tungsten {
 
 struct MeshIntersection
@@ -78,15 +82,33 @@ TriangleMesh::TriangleMesh(std::vector<Vertex> verts, std::vector<TriangleI> tri
 {
 }
 
+/* Return unnormalized geometric normal.
+ * Called in intersect() to get data.Ng.
+ */
 Vec3f TriangleMesh::unnormalizedGeometricNormalAt(int triangle) const
 {
     const TriangleI &t = _tris[triangle];
     Vec3f p0 = _tfVerts[t.v0].pos();
     Vec3f p1 = _tfVerts[t.v1].pos();
     Vec3f p2 = _tfVerts[t.v2].pos();
-    return (p1 - p0).cross(p2 - p0);
+
+	Vec3f normal;
+
+#if USE_COUNTER_CLOCKWISE
+	// counter clockwise
+	normal = ((p1 - p0).normalized()).cross((p2 - p1).normalized());
+#else
+	// clockwise
+	normal = ((p1 - p2).normalized()).cross((p0 - p1).normalized());
+#endif
+
+	return normal;
+    //return (p1 - p0).cross(p2 - p0);
 }
 
+/* Return interpolated shading normal.
+ * Called in intersectionInfo to get info.Ns.
+ */
 Vec3f TriangleMesh::normalAt(int triangle, float u, float v) const
 {
     const TriangleI &t = _tris[triangle];
@@ -156,8 +178,15 @@ void TriangleMesh::loadResources()
 {
     if (_path && !MeshIO::load(*_path, _verts, _tris))
         DBG("Unable to load triangle mesh at %s", *_path);
-    if (_recomputeNormals && _smoothed)
+	if (_recomputeNormals && _smoothed) {
+#if USE_GRADIENT_NORMAL
+		std::string gFile = _path->_workingDirectory + _path->stripExtension().asString() + ".gradient";
+		std::cout << "gradient file: " << gFile << std::endl;
+		_gradient = MeshIO::loadGradient(gFile);
+		if (_gradient.size() != _verts.size()) std::cout << "Error: Number of vertex normal and vertex do not correspond!" << std::endl << "nverts:" << _verts.size() << ", nnorms:" << _gradient.size() << std::endl;
+#endif
         calcSmoothVertexNormals();
+	}
 }
 
 void TriangleMesh::saveResources()
@@ -171,63 +200,120 @@ void TriangleMesh::saveAs(const Path &path) const
     MeshIO::save(path, _verts, _tris);
 }
 
+/* Use fluid density gradient instead of geometry normal as GeometricN.
+ * If use gradient as normal, should swap vertex coordinate y and z.
+ */
 void TriangleMesh::calcSmoothVertexNormals()
 {
     static const float SplitLimit = std::cos(PI*0.15f);
-    //static CONSTEXPR float SplitLimit = -1.0f;
 
-    std::vector<Vec3f> geometricN(_verts.size(), Vec3f(0.0f));
+    std::vector<Vec3f> geometricN(_verts.size(), Vec3f(0.0f));	// vector of geometric normals
     std::unordered_multimap<Vec3f, uint32> posToVert;
 
+	// (vertex-id, pos) pair
     for (uint32 i = 0; i < _verts.size(); ++i) {
-        _verts[i].normal() = Vec3f(0.0f);
+        _verts[i].normal() = Vec3f(0.0f);	// vertex normal initialization
         posToVert.insert(std::make_pair(_verts[i].pos(), i));
     }
 
+#if 0
+	for (uint32 i = 0; i < _verts.size(); ++i) {
+			_verts[i].normal() = _gradient[i].normalized();
+	}
+
+#else
     for (TriangleI &t : _tris) {
-        const Vec3f &p0 = _verts[t.v0].pos();
-        const Vec3f &p1 = _verts[t.v1].pos();
-        const Vec3f &p2 = _verts[t.v2].pos();
-        Vec3f normal = (p1 - p0).cross(p2 - p0);
+		const Vec3f &p0 = _verts[t.v0].pos();	// t.v0 is vertex-id
+		const Vec3f &p1 = _verts[t.v1].pos();
+		const Vec3f &p2 = _verts[t.v2].pos();
+
+		Vec3f normal;
+#if USE_GRADIENT_NORMAL
+		// use gradient
+		Vec3f n0 = _gradient[t.v0];
+		Vec3f n1 = _gradient[t.v1];
+		Vec3f n2 = _gradient[t.v2];
+		//n0.x() *= -1.0f; n1.x() *= -1.0f; n2.x() *= -1.0f;
+		normal = (n0 + n1 + n2);
+#else
+		//normal = ((p1 - p0).normalized()).cross((p2 - p0).normalized());
+#if USE_COUNTER_CLOCKWISE
+		// counter clockwise
+		normal = ((p1 - p0).normalized()).cross((p2 - p1).normalized());
+#else
+		// clockwise
+		normal = ((p1 - p2).normalized()).cross((p0 - p1).normalized());
+#endif
+
+#endif
+
         if (normal == 0.0f)
-            normal = Vec3f(0.0f, 1.0f, 0.0f);
+            normal = Vec3f(0.0f, 1.0f, 0.0f);	// no reach
         else
             normal.normalize();
 
+		/// test if geometric normal differ much???
+		// update vertex and geometricN
         for (int i = 0; i < 3; ++i) {
             Vec3f &n = geometricN[t.vs[i]];
             if (n == 0.0f) {
-                n = normal;
+                n = normal;	// reach
             } else if (n.dot(normal) < SplitLimit) {
+				// no reach
                 _verts.push_back(_verts[t.vs[i]]);
                 geometricN.push_back(normal);
-                t.vs[i] = _verts.size() - 1;
+                t.vs[i] = _verts.size() - 1;    // update index
             }
         }
     }
 
+	// update vertex.normal
     for (TriangleI &t : _tris) {
-        const Vec3f &p0 = _verts[t.v0].pos();
+		const Vec3f &p0 = _verts[t.v0].pos();
         const Vec3f &p1 = _verts[t.v1].pos();
         const Vec3f &p2 = _verts[t.v2].pos();
-        Vec3f normal = (p1 - p0).cross(p2 - p0);
-        Vec3f nN = normal.normalized();
+
+		Vec3f normal(0.0f);
+#if USE_GRADIENT_NORMAL
+		// use gradient
+		Vec3f n0 = _gradient[t.v0];
+		Vec3f n1 = _gradient[t.v1];
+		Vec3f n2 = _gradient[t.v2];
+		//n0.x() *= -1.0f; n1.x() *= -1.0f; n2.x() *= -1.0f;
+		normal = (n0 + n1 + n2);
+#else
+
+		//normal = ((p1 - p0).normalized()).cross((p2 - p0).normalized());
+#if USE_COUNTER_CLOCKWISE
+		// counter clockwise
+		normal = ((p1 - p0).normalized()).cross((p2 - p1).normalized());
+#else
+		// clockwise
+		normal = ((p1 - p2).normalized()).cross((p0 - p1).normalized());
+#endif
+
+#endif
+		Vec3f nN = normal.normalized();
 
         for (int i = 0; i < 3; ++i) {
             auto iters = posToVert.equal_range(_verts[t.vs[i]].pos());
 
-            for (auto t = iters.first; t != iters.second; ++t)
-                if (geometricN[t->second].dot(nN) >= SplitLimit)
-                    _verts[t->second].normal() += normal;
+			for (auto t = iters.first; t != iters.second; ++t) {
+				if (geometricN[t->second].dot(nN) >= SplitLimit)	
+					_verts[t->second].normal() += normal;	// if norms of same position differ too much, then add up and average
+			}
         }
     }
 
+	// update vertex.normal
+	// use geometric normal or shading normal
     for (uint32 i = 0; i < _verts.size(); ++i) {
         if (_verts[i].normal() == 0.0f)
             _verts[i].normal() = geometricN[i];
         else
             _verts[i].normal().normalize();
     }
+#endif
 }
 
 void TriangleMesh::computeBounds()
@@ -299,7 +385,7 @@ void TriangleMesh::makeCone(float radius, float height)
 bool TriangleMesh::intersect(Ray &ray, IntersectionTemporary &data) const
 {
     RTCRay eRay(EmbreeUtil::convert(ray));
-	/// why only triangle mesh uses rtcIntersect() API?
+	/// why only triangle mesh uses rtcIntersect() API without checking?
     rtcIntersect(_scene, eRay);
     if (eRay.geomID != RTC_INVALID_GEOMETRY_ID) {
         ray.setFarT(eRay.tfar);
@@ -307,6 +393,9 @@ bool TriangleMesh::intersect(Ray &ray, IntersectionTemporary &data) const
         data.primitive = this;
         MeshIntersection *isect = data.as<MeshIntersection>();
         isect->Ng = unnormalizedGeometricNormalAt(eRay.primID);
+#if DEBUG_TRIANGLE_MESH
+		std::cout << "unnormalized Ng: " << isect->Ng << std::endl;
+#endif
         isect->u = eRay.u;
         isect->v = eRay.v;
         isect->primId = eRay.primID;
@@ -329,9 +418,14 @@ void TriangleMesh::intersectionInfo(const IntersectionTemporary &data, Intersect
     const MeshIntersection *isect = data.as<MeshIntersection>();
     info.Ng = isect->Ng.normalized();
     if (_smoothed)
-        info.Ns = normalAt(isect->primId, isect->u, isect->v);
+        info.Ns = normalAt(isect->primId, isect->u, isect->v);	// use shading normal
     else
         info.Ns = info.Ng;
+
+#if DEBUG_TRIANGLE_MESH
+	std::cout << "Ng: " << info.Ng << std::endl;
+	std::cout << "Ns: " << info.Ns << std::endl;
+#endif
     info.uv = uvAt(isect->primId, isect->u, isect->v);
     info.primitive = this;
     info.bsdf = _bsdfs[_tris[isect->primId].material].get();
@@ -360,8 +454,8 @@ bool TriangleMesh::tangentSpace(const IntersectionTemporary &data, const Interse
     float invDet = s1*t2 - s2*t1;
     if (std::abs(invDet) < 1e-6f)
         return false;
-    T = (q1*t2 - t1*q2).normalized();
-    B = (q2*s1 - s2*q1).normalized();
+    T = (q1*t2 - t1*q2).normalized();	// tangent
+    B = (q2*s1 - s2*q1).normalized();	// bitangent
 
     return true;
 }
@@ -405,7 +499,7 @@ bool TriangleMesh::samplePosition(PathSampleGenerator &sampler, PositionSample &
     Vec2f uv0 = _tfVerts[_tris[idx].v0].uv();
     Vec2f uv1 = _tfVerts[_tris[idx].v1].uv();
     Vec2f uv2 = _tfVerts[_tris[idx].v2].uv();
-    Vec3f normal = (p1 - p0).cross(p2 - p0).normalized();
+    Vec3f normal = (p1 - p0).cross(p2 - p0).normalized();	// use geometric normal
 
     Vec2f lambda = SampleWarp::uniformTriangleUv(sampler.next2D());
 
@@ -460,7 +554,7 @@ float TriangleMesh::directionalPdf(const PositionSample &point, const DirectionS
 float TriangleMesh::directPdf(uint32 /*threadIndex*/, const IntersectionTemporary &/*data*/,
         const IntersectionInfo &info, const Vec3f &p) const
 {
-    return (p - info.p).lengthSq()/(-info.w.dot(info.Ng)*_totalArea);
+    return (p - info.p).lengthSq()/(-info.w.dot(info.Ng)*_totalArea);	/// ???
 }
 
 Vec3f TriangleMesh::evalPositionalEmission(const PositionSample &sample) const
@@ -493,7 +587,7 @@ bool TriangleMesh::isInfinite() const
     return false;
 }
 
-// Questionable, but there is no cheap and realiable way to compute this factor
+// Questionable, but there is no cheap and reliable way to compute this factor
 float TriangleMesh::approximateRadiance(uint32 /*threadIndex*/, const Vec3f &/*p*/) const
 {
     return -1.0f;
@@ -525,6 +619,7 @@ void TriangleMesh::prepareForRender()
     _tfVerts.resize(_verts.size());
     Mat4f normalTform(_transform.toNormalMatrix());
     for (size_t i = 0; i < _verts.size(); ++i) {
+		// update _tfVerts.normal using vertex.normal (shading normal)
         _tfVerts[i] = Vertex(
             _transform*_verts[i].pos(),
             normalTform.transformVector(_verts[i].normal()),
@@ -585,5 +680,40 @@ Primitive *TriangleMesh::clone()
 {
     return new TriangleMesh(*this);
 }
+
+//////////////////////////////////////////////////////////////////////////
+#if DEBUG_TRIANGLE_FRAME
+void TriangleMesh::setupTangentFrame(const IntersectionTemporary &data, const IntersectionInfo &info, TangentFrame &dst) const {
+	// to setup dst as local shading frame
+	// take smallest component
+	Vec3f T, B, N(info.Ns);
+	if (!tangentSpace(data, info, T, B)) {
+		// X-Y plane
+		if (std::abs(N.x()) > std::abs(N.y()))
+			T = Vec3f(0.0f, 1.0f, 0.0f);
+		else
+			T = Vec3f(1.0f, 0.0f, 0.0f);
+
+		B = T.cross(N);
+		T = N.cross(B);
+	}
+	else {
+		Vec3f n(info.Ns);
+		int dim = (std::abs(n)).maxDim();
+		std::cout << "n: " << n << std::endl;
+		std::cout << "dim: " << dim << std::endl;
+
+		T = Vec3f(n[(dim + 2) % 3], -n[(dim + 1) % 3], 0.0f);
+		N = Vec3f(-n[(dim + 1) % 3] * n[dim], -n[(dim + 2) % 3] * n[dim], (n[(dim + 1) % 3])*(n[(dim + 1) % 3]) + (n[(dim + 2) % 3])*(n[(dim + 2) % 3]));
+		B = N.cross(T);
+	}
+	T.normalize(); N.normalize(); B.normalize();
+	std::cout << "T: " << T << std::endl;
+	std::cout << "N: " << N << std::endl;
+	std::cout << "B: " << B << std::endl;
+
+	dst = TangentFrame(N, T, B);
+}
+#endif
 
 }

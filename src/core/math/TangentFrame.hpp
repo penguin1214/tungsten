@@ -2,12 +2,16 @@
 #define TANGENTSPACE_HPP_
 
 #include <cmath>
+#include <iostream>
 
 #include "Mat4f.hpp"
 #include "Vec.hpp"
 
 namespace Tungsten {
 
+/* Shading coordinate frame in pbrt3.
+ * Reference: https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/geometry/creating-an-orientation-matrix-or-local-coordinate-system
+ */
 struct TangentFrame
 {
     Vec3f normal, tangent, bitangent;

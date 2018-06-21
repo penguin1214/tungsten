@@ -14,6 +14,8 @@
 
 #include <rapidjson/document.h>
 
+#define DEBUG_DIELECTRIC_BSDF 0
+
 namespace Tungsten {
 
 DielectricBsdf::DielectricBsdf()
@@ -46,16 +48,26 @@ rapidjson::Value DielectricBsdf::toJson(Allocator &allocator) const
     };
 }
 
+/* sample output direction. */
 bool DielectricBsdf::sample(SurfaceScatterEvent &event) const
 {
     bool sampleR = event.requestedLobe.test(BsdfLobes::SpecularReflectionLobe);
     bool sampleT = event.requestedLobe.test(BsdfLobes::SpecularTransmissionLobe) && _enableT;
 
-    float eta = event.wi.z() < 0.0f ? _ior : _invIor;
+    float eta = event.wi.z() < 0.0f ? _ior : _invIor;	// event.wi.z() < 0 => outgoing
+#if DEBUG_DIELECTRIC_BSDF
+	std::cout << "hitpoint frame normal: " << event.frame.normal << std::endl;
+	std::cout << "ior: " << eta << std::endl;
+#endif
 
     float cosThetaT = 0.0f;
-    float F = Fresnel::dielectricReflectance(eta, std::abs(event.wi.z()), cosThetaT);
-
+#if DEBUG_DIELECTRIC_BSDF
+	std::cout << "event.wi.z(): " << std::abs(event.wi.z()) << std::endl;
+#endif
+    float F = Fresnel::dielectricReflectance(eta, std::abs(event.wi.z())/*cosThetaI*/, cosThetaT);
+#if DEBUG_DIELECTRIC_BSDF
+	std::cout << "F: " << F << std::endl;
+#endif
     float reflectionProbability;
     if (sampleR && sampleT)
         reflectionProbability = F;
@@ -66,16 +78,29 @@ bool DielectricBsdf::sample(SurfaceScatterEvent &event) const
     else
         return false;
 
-    if (event.sampler->nextBoolean(reflectionProbability)) {
+    if (event.sampler->nextBoolean(reflectionProbability)) {	// reflection
+#if DEBUG_DIELECTRIC_BSDF
+		std::cout << "reflect" << std::endl;
+#endif
         event.wo = Vec3f(-event.wi.x(), -event.wi.y(), event.wi.z());
         event.pdf = reflectionProbability;
         event.sampledLobe = BsdfLobes::SpecularReflectionLobe;
         event.weight = sampleT ? Vec3f(1.0f) : Vec3f(F);
-    } else {
+    } else {	// refraction
+#if DEBUG_DIELECTRIC_BSDF
+		std::cout << "refract" << std::endl;
+#endif
         if (F == 1.0f)
             return false;
-
-        event.wo = Vec3f(-event.wi.x()*eta, -event.wi.y()*eta, -std::copysign(cosThetaT, event.wi.z()));
+		
+        event.wo = Vec3f(-event.wi.x()*eta, -event.wi.y()*eta, -std::copysign(cosThetaT, event.wi.z()));	// refraction direction
+#if DEBUG_DIELECTRIC_BSDF
+		std::cout << "frame local wo: " << event.wo << std::endl;
+#endif
+		/*std::cout << "wi: " << event.wi << std::endl;
+		std::cout << "wo: " << event.wo << std::endl;
+		std::cout << std::abs(event.wo.x() / event.wo.z()) << std::endl;
+		std::cout << cosThetaT << std::endl;*/
         event.pdf = 1.0f - reflectionProbability;
         event.sampledLobe = BsdfLobes::SpecularTransmissionLobe;
         event.weight = sampleR ? Vec3f(1.0f) : Vec3f(1.0f - F);
@@ -85,25 +110,34 @@ bool DielectricBsdf::sample(SurfaceScatterEvent &event) const
     return true;
 }
 
+/* evaluate transparency (not transmittance!) */
 Vec3f DielectricBsdf::eval(const SurfaceScatterEvent &event) const
 {
-    bool evalR = event.requestedLobe.test(BsdfLobes::SpecularReflectionLobe);
-    bool evalT = event.requestedLobe.test(BsdfLobes::SpecularTransmissionLobe) && _enableT;
+    bool evalR = event.requestedLobe.test(BsdfLobes::SpecularReflectionLobe);	// test if reflective
+    bool evalT = event.requestedLobe.test(BsdfLobes::SpecularTransmissionLobe) && _enableT;	// test if transmissive
+
 
     float eta = event.wi.z() < 0.0f ? _ior : _invIor;
     float cosThetaT = 0.0f;
     float F = Fresnel::dielectricReflectance(eta, std::abs(event.wi.z()), cosThetaT);
 
-    if (event.wi.z()*event.wo.z() >= 0.0f) {
-        if (evalR && checkReflectionConstraint(event.wi, event.wo))
+    if (event.wi.z()*event.wo.z() >= 0.0f) {	// event.wo = -wi
+		if (evalR && checkReflectionConstraint(event.wi, event.wo)) {
+			//std::cout << "checkreflectionconstraint" << std::endl;
             return F*albedo(event.info);
-        else
-            return Vec3f(0.0f);
+		}
+		else {
+			return Vec3f(0.0f);
+		}
     } else {
-        if (evalT && checkRefractionConstraint(event.wi, event.wo, eta, cosThetaT))
-            return (1.0f - F)*albedo(event.info);
-        else
-            return Vec3f(0.0f);
+		if (evalT && checkRefractionConstraint(event.wi, event.wo, eta, cosThetaT)) {
+			//std::cout << "check refraction constraint" << std::endl;
+			return (1.0f - F)*albedo(event.info);
+		}
+		else {
+			//std::cout << "transmit no constraint" << std::endl;
+			return Vec3f(0.0f);
+		}
     }
 }
 

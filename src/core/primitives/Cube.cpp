@@ -16,7 +16,7 @@ struct CubeIntersection
 
 Cube::Cube()
 : _pos(0.0f),
-  _scale(0.5f),
+  _scale(/*0.5*/1.0f),
   _bsdf(_defaultBsdf)
 {
 }
@@ -27,7 +27,7 @@ Cube::Cube(const Vec3f &pos, const Vec3f &scale, const Mat4f &rot,
   _rot(rot),
   _invRot(rot.transpose()),
   _pos(pos),
-  _scale(scale*0.5f),
+  _scale(scale*/*0.5*/1.0f),
   _bsdf(std::move(bsdf))
 {
     _transform = Mat4f::translate(_pos)*rot*Mat4f::scale(Vec3f(scale));
@@ -156,6 +156,10 @@ bool Cube::hitBackside(const IntersectionTemporary &data) const
 
 void Cube::intersectionInfo(const IntersectionTemporary &/*data*/, IntersectionInfo &info) const
 {
+	//std::cout << "info.p: " << info.p << std::endl;
+	//std::cout << "_pos: " << _pos << std::endl;
+	//std::cout << info.p - _pos << std::endl;
+
     Vec3f p = _invRot*(info.p - _pos);
     Vec3f n(0.0f);
     int dim = (std::abs(p) - _scale).maxDim();
@@ -352,9 +356,17 @@ const TriangleMesh &Cube::asTriangleMesh()
 
 void Cube::prepareForRender()
 {
-    _pos = _transform*Vec3f(0.0f);
-    _scale = _transform.extractScale()*Vec3f(0.5f);
+	//std::cout << "transform: " << std::endl << _transform << std::endl;
+    _pos = _transform*Vec3f(0.0f);	// transform origin point to _transform
+	//std::cout << "_pos: " << std::endl << _pos << std::endl;
+
+	//std::cout << "scale: " << std::endl << _transform.extractScale() << std::endl;
+    //_scale = _transform.extractScale()*Vec3f(0.5f);	/// why 0.5?
+	_scale = _transform.extractScale()*Vec3f(1.0f);	/// change to 1.0
+	//std::cout << "_scale: " << std::endl << _scale << std::endl;
+
     _rot = _transform.extractRotation();
+
     _invRot = _rot.transpose();
     _faceCdf = 4.0f*Vec3f(
         _scale.y()*_scale.z(),

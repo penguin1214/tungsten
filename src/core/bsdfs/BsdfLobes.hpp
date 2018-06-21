@@ -109,6 +109,10 @@ public:
     {
         return _lobes != 0 && (_lobes & AllButSpecular) == 0;
     }
+
+	uint32 value() const {
+		return _lobes;
+	}
 };
 
 }

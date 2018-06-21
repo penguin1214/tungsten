@@ -8,6 +8,7 @@
 #include "thread/ThreadUtils.hpp"
 
 #include "io/FileUtils.hpp"
+#include "io/MeshIO.hpp"
 
 #include "RenderWindow.hpp"
 #include "MainWindow.hpp"

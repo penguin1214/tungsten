@@ -102,6 +102,8 @@ public:
 
     void setupTangentFrame(const IntersectionTemporary &data,
             const IntersectionInfo &info, TangentFrame &dst) const;
+	/*virtual void setupTangentFrame(const IntersectionTemporary &data,
+		const IntersectionInfo &info, TangentFrame &dst) const;*/
 
     virtual std::vector<std::shared_ptr<Primitive>> createHelperPrimitives()
     {

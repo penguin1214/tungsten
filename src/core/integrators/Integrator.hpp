@@ -24,6 +24,7 @@ protected:
     void advanceSpp();
 
     void writeBuffers(const std::string &suffix, bool overwrite);
+    void writeBuffers(Path &sceneFilePath, const std::string &suffix, bool overwrite);
 
     virtual void saveState(OutputStreamHandle &out) = 0;
     virtual void loadState(InputStreamHandle &in) = 0;
@@ -40,6 +41,7 @@ public:
     virtual void abortRender() = 0;
 
     virtual void saveOutputs();
+	virtual void saveOutputs(Path currentScenePath);
     void saveCheckpoint();
 
     void saveRenderResumeData(Scene &scene);

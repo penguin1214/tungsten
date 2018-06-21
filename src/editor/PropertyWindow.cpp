@@ -8,6 +8,9 @@
 
 #include "io/Scene.hpp"
 
+#include "primitives/Cube.hpp"
+#include "bsdfs/LambertBsdf.hpp"
+
 #include <QtWidgets>
 
 namespace Tungsten {
@@ -54,6 +57,21 @@ void PropertyWindow::populateSceneTree()
         else
             finites.push_back(p.get());
     }
+
+#if 0
+	/// Grid BBox
+	for (const auto &p : _scene->media()) {
+		Box3f tBBox = p.get()->grid()->bounds();
+		Vec3f tCubePos = tBBox.min() + tBBox.max(); tCubePos *= 0.5;
+		Vec3f tCubeScale = tBBox.max() - tBBox.min(); tCubeScale *= p.get()->grid()->configTransform().extractScaleVec();
+		Mat4f tCubeRot = p.get()->grid()->configTransform().extractRotation();
+		std::string tCubeName = p.get()->name();
+		std::shared_ptr<LambertBsdf> tCubeBsdf = std::make_shared<LambertBsdf>();
+
+		Cube *tCube = new Cube(tCubePos, tCubeScale, tCubeRot, tCubeName, tCubeBsdf);
+		finites.push_back(tCube);
+	}
+#endif
 
     _sceneTree->setColumnCount(1);
     _sceneTree->setHeaderLabel("Name");

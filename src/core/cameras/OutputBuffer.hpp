@@ -16,6 +16,22 @@
 
 namespace Tungsten {
 
+	static Path incrementalFilename(const Path &dstFile, const std::string &suffix, bool overwrite) {
+		Path dstPath = (dstFile.stripExtension() + suffix) + dstFile.extension();
+		if (overwrite)
+			return std::move(dstPath);
+
+		Path barePath = dstPath.stripExtension();
+		Path extension = dstPath.extension();
+
+		int index = 0;
+		while (dstPath.exists())
+			dstPath = (barePath + tfm::format("%03d", ++index)) + extension;
+
+		return std::move(dstPath);
+	}
+
+
 template<typename T>
 class OutputBuffer
 {
@@ -145,14 +161,17 @@ public:
 
     void save() const
     {
-        Path ldrFile = _settings.ldrOutputFile();
-        Path hdrFile = _settings.hdrOutputFile();
-        Path ldrVariance = ldrFile.stripExtension() + "Variance" + ldrFile.extension();
-        Path hdrVariance = hdrFile.stripExtension() + "Variance" + hdrFile.extension();
-        Path ldrFileA = ldrFile.stripExtension() + "A" + ldrFile.extension();
-        Path hdrFileA = hdrFile.stripExtension() + "A" + hdrFile.extension();
-        Path ldrFileB = ldrFile.stripExtension() + "B" + ldrFile.extension();
-        Path hdrFileB = hdrFile.stripExtension() + "B" + hdrFile.extension();
+		Path baseLdrFile = _settings.ldrOutputFile();
+		Path baseHdrFile = _settings.hdrOutputFile();
+        Path ldrFile = incrementalFilename(_settings.ldrOutputFile().stripExtension(), _settings.ldrOutputFile().extension().asString(), false);
+        Path hdrFile = incrementalFilename(_settings.hdrOutputFile().stripExtension(), _settings.hdrOutputFile().extension().asString(), false);
+		std::cout << "ldrFile: " << hdrFile.asString() << std::endl;
+		Path ldrVariance = incrementalFilename((baseLdrFile.stripExtension() + "Variance"), ldrFile.extension().asString(), false);
+        Path hdrVariance = incrementalFilename( (baseHdrFile.stripExtension() + "Variance"), hdrFile.extension().asString(), false);
+        Path ldrFileA = incrementalFilename((baseLdrFile.stripExtension() + "A"), ldrFile.extension().asString(), false);
+        Path hdrFileA = incrementalFilename((baseHdrFile.stripExtension() + "A"), hdrFile.extension().asString(), false);
+        Path ldrFileB = incrementalFilename((baseLdrFile.stripExtension() + "B"), ldrFile.extension().asString(), false);
+        Path hdrFileB = incrementalFilename((baseHdrFile.stripExtension() + "B"), hdrFile.extension().asString(), false);
 
         uint32 numPixels = _res.product();
         if (_bufferB) {

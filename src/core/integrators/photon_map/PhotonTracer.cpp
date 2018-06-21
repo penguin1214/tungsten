@@ -252,8 +252,6 @@ Vec3f PhotonTracer::traceSensorPath(Vec2u pixel, const KdTree<Photon> &surfaceTr
 	_mailIdx++;
 
 	PositionSample point;
-	// cam().samplePosition & cam().sampleDirection() returns false?
-	// should return true?
 	if (!_scene->cam().samplePosition(sampler, point))
 		return Vec3f(0.0f);
 	DirectionSample direction;
@@ -261,6 +259,7 @@ Vec3f PhotonTracer::traceSensorPath(Vec2u pixel, const KdTree<Photon> &surfaceTr
 		return Vec3f(0.0f);
 
 	Vec3f throughput = point.weight*direction.weight;
+
 	Ray ray(point.p, direction.d);
 	ray.setPrimaryRay(true);    // set is primary
 
@@ -293,6 +292,7 @@ Vec3f PhotonTracer::traceSensorPath(Vec2u pixel, const KdTree<Photon> &surfaceTr
 					estimate += (3.0f*INV_PI*sqr(1.0f - distSq/p.radiusSq))/p.radiusSq
 							*medium->phaseFunction(p.pos)->eval(p.dir, -ray.dir())
 							*medium->transmittance(sampler, mediumQuery)*p.power;
+					// std::cout << estimate << std::endl;
 				};
 				auto beamContribution = [&](uint32 photonIndex, const Vec3pf *bounds, float tMin, float tMax) {
 					const PhotonBeam &beam = beams[photonIndex];
@@ -361,10 +361,12 @@ Vec3f PhotonTracer::traceSensorPath(Vec2u pixel, const KdTree<Photon> &surfaceTr
 
 		Vec3f wo;
 		if (sampler.nextBoolean(transparencyScalar)) {
+			/// transmission
 			wo = ray.dir();
 			throughput *= transparency/transparencyScalar;
 		} else {
-			event.requestedLobe = BsdfLobes::SpecularLobe;
+			/// reflection
+			event.requestedLobe = BsdfLobes::SpecularLobe;	// why specular?
 			if (!bsdf.sample(event, false))
 				break;
 
@@ -395,6 +397,8 @@ Vec3f PhotonTracer::traceSensorPath(Vec2u pixel, const KdTree<Photon> &surfaceTr
 			result += throughput*info.primitive->evalDirect(data, info);
 		return result;
 	}
+	
+	// direct lighting
 	if (info.primitive->isEmissive() && bounce > _settings.minBounces)
 		result += throughput*info.primitive->evalDirect(data, info);
 
@@ -445,12 +449,14 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
 
 	Ray ray(point.p, direction.d);
 	/// weights are set when samples are generated.
-	/// throughput is initial photon power?
+	/// are weights the multi importance sampling weights?
+
+	/// The product of a path’s BSDF and geometry terms is called the throughput of the path
 	Vec3f throughput(point.weight*direction.weight/lightPdf);
 
-	/// pathRange?
 	if (!pathRange.full()) {
 		PathPhoton &p = pathRange.addPhoton();
+		// std::cout << "path photon <0> added" << std::endl;
 		p.pos = point.p;
 		p.power = throughput;
 		p.setPathInfo(0, true);
@@ -460,23 +466,19 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
 	IntersectionTemporary data;
 	IntersectionInfo info;
 	Medium::MediumState state;
-	state.reset();	/// start tracing
+	state.reset();
 	Vec3f emission(0.0f);
 
-	/// ??? tracePlanes???
-	/// what is volume photon type
 	bool tracePlanes = (_settings.volumePhotonType == PhotonMapSettings::VOLUME_PLANES) ||
 					   (_settings.volumePhotonType == PhotonMapSettings::VOLUME_PLANES_1D);
 	bool useLowOrder = _settings.lowOrderScattering || _settings.volumePhotonType != PhotonMapSettings::VOLUME_POINTS;
 	int bounce = 0;
 	int bounceSinceSurface = 0;
 	bool wasSpecular = true;
-	/// didHit should only consider surface intersection?
 	bool didHit = _scene->intersect(ray, data, info);
 
-	/// for photon mapping, volume and surface are both handled in the while loop
 	while ((didHit || medium) && bounce < _settings.maxBounces - 1) {
-		bool hitSurface = didHit;	// whether exit volume, if any
+		bool hitSurface = didHit;
 		bounce++;
 		bounceSinceSurface++;
 
@@ -484,27 +486,24 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
 
 		if (medium) {
 
-			/// medium sample point attributes
 			MediumSample mediumSample;
-			/// TODO
 			if (!medium->sampleDistance(sampler, ray, state, mediumSample))
 				break;
 			continuedThroughput *= mediumSample.continuedWeight;
-			throughput *= mediumSample.weight;	// weight is transparency
+			throughput *= mediumSample.weight;	// throughput is a concept in path space
 			hitSurface = mediumSample.exited;
 
 			/// store photon in volume
-			/// store more than once bounce photons, why?
 			if (!hitSurface && (useLowOrder || bounceSinceSurface > 1) && !volumeRange.full()) {
 				VolumePhoton &p = volumeRange.addPhoton();
 				p.pos = mediumSample.p;
+				// std::cout << p.pos << std::endl;
 				p.dir = ray.dir();
-				/// do not use constant power? and do not use rolette to decide if scatter or absorb
+				/// do not use constant power? and do not use roulette to decide if scatter or absorb
 				p.power = throughput;
 				p.bounce = bounce;
 			}
 
-			/// path range???
 			if ((!hitSurface || tracePlanes) && !pathRange.full()) {
 				pathRange.nextPtr()[-1].sampledLength = mediumSample.continuedT;
 				PathPhoton &p = pathRange.addPhoton();
@@ -543,11 +542,10 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
 		}
 
 		//////////////////////////////////////////////////////////////////////////
-		/// store surface photon
-		/// since we may have no surfaces, must check didHit before hitSurface
 		if (didHit) {
 			if (hitSurface) {
 				if (!info.bsdf->lobes().isPureSpecular() && !surfaceRange.full()) {
+					// do not store specular surface
 					Photon &p = surfaceRange.addPhoton();
 					p.pos = info.p;
 					p.dir = ray.dir();
@@ -571,8 +569,9 @@ void PhotonTracer::tracePhotonPath(SurfacePhotonRange &surfaceRange, VolumePhoto
 			/// scatter
 			if (hitSurface) {
 				event = makeLocalScatterEvent(data, info, ray, &sampler);
+				// primitive.medium is set here
 				if (!handleSurface(event, data, info, medium, bounce,
-					true, false, ray, throughput, emission, wasSpecular, state))
+					true, false/*enableLightSampling, why false? do light sampling even for specular surface?*/, ray, throughput, emission, wasSpecular, state))
 					break;
 				bounceSinceSurface = 0;
 			}

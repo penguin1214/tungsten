@@ -175,7 +175,9 @@ bool Quad::sampleDirect(uint32 /*threadIndex*/, const Vec3f &p, PathSampleGenera
         return false;
 
     Vec2f xi = sampler.next2D();
-    Vec3f q = _base + xi.x()*_edge0 + xi.y()*_edge1;
+    Vec3f q = _base + xi.x()*_edge0 + xi.y()*_edge1;	// sampled point on light source
+	//std::cout << "light point: " << q << std::endl;
+	//std::cout << "surface point" << p << std::endl;
     sample.d = q - p;
     float rSq = sample.d.lengthSq();
     sample.dist = std::sqrt(rSq);

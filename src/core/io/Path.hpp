@@ -14,6 +14,7 @@ class FileIterator;
 
 class Path
 {
+public:
     std::string _workingDirectory;
     std::string _path;
 

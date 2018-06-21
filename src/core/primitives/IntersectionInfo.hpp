@@ -10,8 +10,8 @@ class Bsdf;
 
 struct IntersectionInfo
 {
-    Vec3f Ng;
-    Vec3f Ns;
+    Vec3f Ng;	// geometric normal
+    Vec3f Ns;	// shading normal
     Vec3f p;
     Vec3f w;
     Vec2f uv;

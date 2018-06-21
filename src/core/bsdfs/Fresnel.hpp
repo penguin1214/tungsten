@@ -75,6 +75,7 @@ static inline Vec3f thinFilmReflectanceInterference(float eta, float cosThetaI, 
 static inline float dielectricReflectance(float eta, float cosThetaI, float &cosThetaT)
 {
     if (cosThetaI < 0.0f) {
+		// outgoing
         eta = 1.0f/eta;
         cosThetaI = -cosThetaI;
     }

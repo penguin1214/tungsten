@@ -3,6 +3,7 @@
 #include "math/MathUtil.hpp"
 
 #include <thread>
+#include <iostream>
 #if _WIN32
 #include <windows.h>
 #else
@@ -36,10 +37,9 @@ uint32 idealThreadCount()
         return n;
 
     // All attempts failed. Let's take a guess
-    return 4;
-
+    return 3;
 #endif
-	return 4;
+	return 12;
 }
 
 void startThreads(int numThreads)

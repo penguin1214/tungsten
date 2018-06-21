@@ -19,3 +19,4 @@
 !/data/mc-loader
 !/data/shaders
 !/cmake/
+src/thirdparty/

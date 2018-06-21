@@ -48,7 +48,7 @@ struct VolumePhoton : public Photon
     float radiusSq;
 };
 
-/// ??? what is path photon
+// pathPhoton is used for non-point volume photons
 struct PathPhoton
 {
     Vec3f pos;
@@ -62,7 +62,7 @@ struct PathPhoton
     {
         data = bounce;
         if (onSurface)
-            data |= (1u << 31u);
+            data |= (1u << 31u);	// 10000...0 | data
     }
     bool onSurface() const
     {

@@ -1,5 +1,7 @@
 #include "TraceBase.hpp"
 
+#include <fstream>
+
 namespace Tungsten {
 
 TraceBase::TraceBase(TraceableScene *scene, const TraceSettings &settings, uint32 threadId)
@@ -28,6 +30,7 @@ SurfaceScatterEvent TraceBase::makeLocalScatterEvent(IntersectionTemporary &data
     info.primitive->setupTangentFrame(data, info, frame);
 
     bool hitBackside = frame.normal.dot(ray.dir()) > 0.0f;
+    //bool hitBackside = !frame.normal.dot(ray.dir()) > 0.0f;	// make no difference though
     bool isTransmissive = info.bsdf->lobes().isTransmissive();
 
     bool flipFrame = _settings.enableTwoSidedShading && hitBackside && !isTransmissive;
@@ -44,7 +47,7 @@ SurfaceScatterEvent TraceBase::makeLocalScatterEvent(IntersectionTemporary &data
         &info,
         sampler,
         frame,
-        frame.toLocal(-ray.dir()),
+        frame.toLocal(-ray.dir()),	// wi,	wi.z is -ray's projection on normal
         BsdfLobes::AllLobes,
         flipFrame
     );
@@ -75,6 +78,9 @@ inline Vec3f TraceBase::generalizedShadowRayImpl(PathSampleGenerator &sampler,
 
     float initialFarT = ray.farT();
     Vec3f throughput(1.0f);
+
+	// std::cout << " shadow ray " << std::endl;
+
     do {
         bool didHit = _scene->intersect(ray, data, info) && info.primitive != endCap;
         if (didHit) {
@@ -109,6 +115,7 @@ inline Vec3f TraceBase::generalizedShadowRayImpl(PathSampleGenerator &sampler,
                 pdfBackward *= backward;
             } else {
                 throughput *= medium->transmittance(sampler, ray);
+				// std::cout << throughput << std::endl;
             }
         }
         if (info.primitive == nullptr || info.primitive == endCap)
@@ -249,18 +256,26 @@ Vec3f TraceBase::lightSample(const Primitive &light,
                              Vec3f *transmittance)
 {
     LightSample sample;
+	// sample hitpoint on light surface
     if (!light.sampleDirect(_threadId, event.info->p, *event.sampler, sample))
         return Vec3f(0.0f);
 
-    event.wo = event.frame.toLocal(sample.d);
+    event.wo = event.frame.toLocal(sample.d);	// surface to light
     if (!isConsistent(event, sample.d))
         return Vec3f(0.0f);
 
     bool geometricBackside = (sample.d.dot(event.info->Ng) < 0.0f);
     medium = event.info->primitive->selectMedium(medium, geometricBackside);
 
-    event.requestedLobe = BsdfLobes::AllButSpecular;
+	//event.requestedLobe = BsdfLobes::AllButSpecular;	/// ?
+	event.requestedLobe = BsdfLobes::AllLobes;
 
+	/// at each ray bounce, a new indirect ray is generated via the BRDF, 
+	/// AND to generate a new direct ray towards a randomly chosen light source via multiple importance sampling
+	/// and multiply the accumulated color by the resultant emittance. 
+	/// Multiple importance sampled direct lighting works by balancing two different sampling strategies:
+	/// sampling by light source and sampling by BRDF,
+	/// and then weighting the two results with some sort of heuristic (such as the power heuristic described in Eric Veach’s thesis
     Vec3f f = event.info->bsdf->eval(event, false);
     if (f == 0.0f)
         return Vec3f(0.0f);
@@ -386,14 +401,26 @@ Vec3f TraceBase::sampleDirect(const Primitive &light,
                               Vec3f *transmittance)
 {
     Vec3f result(0.0f);
-
-    if (event.info->bsdf->lobes().isPureSpecular() || event.info->bsdf->lobes().isForward())
-        return Vec3f(0.0f);
+#if 1
+	// doesn't make a difference
+	// handle specular interactions
+	if (event.info->bsdf->lobes().isPureSpecular()) {
+		// pure specular interaction
+		//return Vec3f(0.05) * event.info->Ng.dot(event.wi);
+		return Vec3f(0.0);
+	}
+	
+	if (event.info->bsdf->lobes().isForward()) {
+		return Vec3f(0.0f);
+	}
+#endif
 
     result += lightSample(light, event, medium, bounce, parentRay, transmittance);
+
     if (!light.isDirac())
         result += bsdfSample(light, event, medium, bounce, parentRay);
 
+	// std::cout << event.info->bsdf->lobes().value() << "   " << result << std::endl;
     return result;
 }
 
@@ -485,9 +512,11 @@ Vec3f TraceBase::estimateDirect(SurfaceScatterEvent &event,
                                 Vec3f *transmittance)
 {
     float weight;
+	// randomly choose a single light source to compute direct lighting from the chosen light
     const Primitive *light = chooseLight(*event.sampler, event.info->p, weight);
-    if (light == nullptr)
-        return Vec3f(0.0f);
+	if (light == nullptr) {
+		return Vec3f(0.0f);
+	}
     return sampleDirect(*light, event, medium, bounce, parentRay, transmittance)*weight;
 }
 
@@ -520,37 +549,43 @@ bool TraceBase::handleSurface(SurfaceScatterEvent &event, IntersectionTemporary 
 {
     const Bsdf &bsdf = *info.bsdf;
 
-    // For forward events, the transport direction does not matter (since wi = -wo)
-    Vec3f transparency = bsdf.eval(event.makeForwardEvent(), false);	/// ???
+    Vec3f transparency = bsdf.eval(event.makeForwardEvent(), false);	// sample_f ? fresnel reflection?
     float transparencyScalar = transparency.avg();
 
     Vec3f wo;
     if (event.sampler->nextBoolean(transparencyScalar) ){
+		// go through (keep direction)
         wo = ray.dir();
         event.pdf = transparencyScalar;
         event.weight = transparency/transparencyScalar;
         event.sampledLobe = BsdfLobes::ForwardLobe;
         throughput *= event.weight;
     } else {
-		/// direct lighting?
+		// reflection & refraction
         if (!adjoint) {
-            if (enableLightSampling && bounce < _settings.maxBounces - 1)
-                emission += estimateDirect(event, medium, bounce + 1, ray, transmittance)*throughput;
+			if (enableLightSampling && bounce < _settings.maxBounces) {
+				// estimateDirect should use MIS
+				emission += estimateDirect(event, medium, bounce /*+1*/, ray, transmittance)*throughput;
+				// std::cout << "direct emission" << emission << std::endl;
+			}
 
             if (info.primitive->isEmissive() && bounce >= _settings.minBounces) {
+				/// light source?
                 if (!enableLightSampling || wasSpecular || !info.primitive->isSamplable())
                     emission += info.primitive->evalDirect(data, info)*throughput;
             }
         }
 
         event.requestedLobe = BsdfLobes::AllLobes;
-        if (!bsdf.sample(event, adjoint))
-            return false;
+		// compute outgoing direction
+        if (!bsdf.sample(event, adjoint))	// set event pdf, wo, weight, event.sampledLobe
+            return false;	// terminate
 
         wo = event.frame.toGlobal(event.wo);
+		//std::cout << "global wo: " << wo << std::endl;
 
         if (!isConsistent(event, wo))
-            return false;
+            return false;	// terminate
 
         throughput *= event.weight;
         wasSpecular = event.sampledLobe.hasSpecular();

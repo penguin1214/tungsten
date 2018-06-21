@@ -352,6 +352,7 @@ Vec3f PathVertex::pos() const
     }
 }
 
+// Use geometric normal
 float PathVertex::cosineFactor(const Vec3f &d) const
 {
     switch (_type) {

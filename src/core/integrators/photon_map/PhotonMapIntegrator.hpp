@@ -20,6 +20,10 @@
 #include <memory>
 #include <vector>
 
+#ifndef PHOTON_MAP_VISUALIZE
+#define PHOTON_MAP_VISUALIZE 0
+#endif
+
 namespace Tungsten {
 
 namespace Bvh {
@@ -103,6 +107,9 @@ public:
     virtual void startRender(std::function<void()> completionCallback) override;
     virtual void waitForCompletion() override;
     virtual void abortRender() override;
+
+	void PhotonMapIntegrator::writePhotonToFile();
+
 };
 
 }

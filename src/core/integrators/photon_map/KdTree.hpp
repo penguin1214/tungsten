@@ -325,6 +325,10 @@ public:
     {
         return std::move(_nodes);
     }
+
+	PhotonType *nodes() {
+		return _nodes;
+	}
 };
 
 }

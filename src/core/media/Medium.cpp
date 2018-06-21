@@ -49,4 +49,8 @@ const PhaseFunction *Medium::phaseFunction(const Vec3f &/*p*/) const
     return _phaseFunction.get();
 }
 
+std::shared_ptr<PlainGrid> Medium::grid() {
+	return std::make_shared<PlainGrid>();
+}
+
 }

@@ -10,6 +10,7 @@
 
 namespace Tungsten {
 
+	int pixel_num = 0;
 CONSTEXPR uint32 PathTraceIntegrator::TileSize;
 CONSTEXPR uint32 PathTraceIntegrator::VarianceTileSize;
 CONSTEXPR uint32 PathTraceIntegrator::AdaptiveThreshold;
@@ -137,20 +138,23 @@ void PathTraceIntegrator::renderTile(uint32 id, uint32 tileId)
 {
     ImageTile &tile = _tiles[tileId];
     for (uint32 y = 0; y < tile.h; ++y) {
+		//std::cout << "tile id: " << tileId << "   " << float(y) / float(tile.h) << std::endl;
         for (uint32 x = 0; x < tile.w; ++x) {
             Vec2u pixel(tile.x + x, tile.y + y);
             uint32 pixelIndex = pixel.x() + pixel.y()*_w;
-			/// ???
+
             uint32 variancePixelIndex = pixel.x()/VarianceTileSize + pixel.y()/VarianceTileSize*_varianceW;
 
             SampleRecord &record = _samples[variancePixelIndex];
             int spp = record.nextSampleCount;
             for (int i = 0; i < spp; ++i) {
+				pixel_num++;
+				/*std::cout << "#######################################" << std::endl;
+				std::cout << "Pixel No. " << pixel_num << std::endl;*/
                 tile.sampler->startPath(pixelIndex, record.sampleIndex + i);
 				/// trace
                 Vec3f c = _tracers[id]->traceSample(pixel, *tile.sampler);
-
-                record.addSample(c);	/// ???
+                record.addSample(c);
                 _scene->cam().colorBuffer()->addSample(pixel, c);
             }
         }

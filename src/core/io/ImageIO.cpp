@@ -621,6 +621,7 @@ bool saveHdr(const Path &path, const float *img, int w, int h, int channels)
 
 bool saveLdr(const Path &path, const uint8 *img, int w, int h, int channels)
 {
+	std::cout << path.asString() << std::endl;
     if (path.testExtension("png"))
         return savePng(path, img, w, h, channels);
 

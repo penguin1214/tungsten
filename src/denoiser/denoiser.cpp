@@ -144,26 +144,31 @@ std::unique_ptr<PixmapF> slicePixmap(const Pixmap3f &src, int channel)
     return std::move(result);
 }
 
-void loadInputBuffers(RenderBuffer3f &image, std::vector<RenderBufferF> &features, const Scene &scene)
+void loadInputBuffers(RenderBuffer3f &image, std::vector<RenderBufferF> &features, const Scene &scene, std::string fileNum)
 {
     for (const auto &b : scene.rendererSettings().renderOutputs()) {
         if (!b.hdrOutputFile().empty()) {
-            Path file = b.hdrOutputFile();
+			Path baseFile = b.hdrOutputFile();
+			Path file = b.hdrOutputFile().stripExtension() + fileNum + b.hdrOutputFile().extension();
+			std::cout << "Using output file: " << file.asString() << std::endl;
             auto buffer = loadPixmap<Vec3f>(file, true);
             if (buffer) {
                 std::unique_ptr<Pixmap3f> bufferVariance;
                 if (b.sampleVariance()) {
-                    Path varianceFile = file.stripExtension() + "Variance" + file.extension();
+                    Path varianceFile = baseFile.stripExtension() + "Variance" + fileNum + file.extension();
+					std::cout << varianceFile.asString() << std::endl;
                     bufferVariance = loadPixmap<Vec3f>(varianceFile);
                 }
                 std::unique_ptr<Pixmap3f> bufferA, bufferB;
                 if (b.twoBufferVariance()) {
-                    Path fileA = file.stripExtension() + "A" + file.extension();
-                    Path fileB = file.stripExtension() + "B" + file.extension();
+                    Path fileA = baseFile.stripExtension() + "A" + fileNum + file.extension();
+					std::cout << "fileA: " << fileA.asString() << std::endl;
+                    Path fileB = baseFile.stripExtension() + "B" + fileNum + file.extension();
                     bufferA = loadPixmap<Vec3f>(fileA);
                     bufferB = loadPixmap<Vec3f>(fileB);
                 }
 
+				std::cout << "load buffers done" << std::endl;
                 if (b.type() == OutputColor) {
                     image.buffer         = std::move(buffer);
                     image.bufferA        = std::move(bufferA);
@@ -218,7 +223,7 @@ int main(int argc, const char *argv[])
 
     RenderBuffer3f image;
     std::vector<RenderBufferF> features;
-    loadInputBuffers(image, features, *scene);
+    loadInputBuffers(image, features, *scene, targetFile.asString().substr(targetFile.asString().length()-7, 3));
 
     Timer timer;
     Pixmap3f result = nforDenoiser(std::move(image), std::move(features));

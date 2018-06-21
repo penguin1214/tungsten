@@ -71,26 +71,60 @@ bool HomogeneousMedium::sampleDistance(PathSampleGenerator &sampler, const Ray &
 
     float maxT = ray.farT();
     if (_absorptionOnly) {
-        if (maxT == Ray::infinity())
-            return false;	/// for medium, why ray.farT cannot be infinite?
-        sample.t = maxT;
-        sample.weight = FastMath::exp(-_sigmaT*maxT);
-        sample.pdf = 1.0f;
-        sample.exited = true;
+		/*if (maxT == Ray::infinity())
+			return false;
+		sample.t = maxT;
+		sample.weight = FastMath::exp(-_sigmaT*maxT);
+		sample.pdf = 1.0f;
+		sample.exited = true;*/
+
+		float t = 0;
+		bool terminate = false;
+
+		do {
+			float zeta = sampler.next1D();
+			t -= std::log(1 - zeta);
+			sample.exited = (t > maxT);
+
+			if (t > maxT) {
+				terminate = true;
+				sample.t = maxT;
+				sample.weight = FastMath::exp(-_sigmaT*maxT);
+				sample.pdf = 1.0f;
+				break;
+			}
+			else {
+				// absorb
+				terminate = true;
+				sample.t = t;
+				sample.weight = _sigmaT * FastMath::exp(-_sigmaT*t);
+				sample.pdf *= sample.weight.avg();
+			}
+			
+		} while (!terminate);
+
+		state.advance();
+
     } else {
+		// sample a spectrum channel to pick a particular extinction coefficient
         int component = sampler.nextDiscrete(3);
         float sigmaTc = _sigmaT[component];
 
+		// importance sampling the exponential distribution (of Tr),
+		// as the interaction point
         float t = -std::log(1.0f - sampler.next1D())/sigmaTc;
-        sample.t = min(t, maxT);
+        sample.t = min(t, maxT);	// test whether the sampled point is in the interval or on surface
+
         sample.continuedT = t;
-        sample.weight = FastMath::exp(-sample.t*_sigmaT);
+
+        sample.weight = FastMath::exp(-sample.t*_sigmaT);	// Tr
         sample.continuedWeight = FastMath::exp(-sample.continuedT*_sigmaT);
+
         sample.exited = (t >= maxT);
         if (sample.exited) {
             sample.pdf = sample.weight.avg();
         } else {
-            sample.pdf = (_sigmaT*sample.weight).avg();
+            sample.pdf = (_sigmaT*sample.weight).avg();	// _sigmaT is due to MC integration
             sample.weight *= _sigmaS;
         }
         sample.weight /= sample.pdf;

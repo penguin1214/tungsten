@@ -204,9 +204,8 @@ public:
 			std::unique_lock<std::mutex> lock(_sceneMutex);
 			/// bind current scene to renderer
 			/// PARSE FILE
-			// Scene class is used to parse scene files!
 			_scene.reset(Scene::load(Path(currentScene)));
-			_scene->loadResources();	// do nothing?
+			_scene->loadResources();
 		} catch (const JsonLoadException &e) {
 			std::cerr << e.what() << std::endl;
 
@@ -315,7 +314,9 @@ public:
 			writeLogLine(tfm::format("Finished render. Render time %s",
 					StringUtils::durationToString(timer.elapsed())));
 
-			integrator.saveOutputs();
+
+			integrator.saveOutputs(currentScene);
+
 			if (_scene->rendererSettings().enableResumeRender())
 				integrator.saveRenderResumeData(*_scene);
 

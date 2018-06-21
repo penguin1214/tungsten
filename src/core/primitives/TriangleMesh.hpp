@@ -16,6 +16,8 @@
 #include <embree2/rtcore_scene.h>
 #include <embree2/rtcore_geometry.h>
 
+#define DEBUG_TRIANGLE_FRAME 0
+
 namespace Tungsten {
 
 class Scene;
@@ -28,8 +30,10 @@ class TriangleMesh : public Primitive
     bool _recomputeNormals;
 
     std::vector<Vertex> _verts;
-    std::vector<Vertex> _tfVerts;
+    std::vector<Vertex> _tfVerts;	// transformed verts
     std::vector<TriangleI> _tris;
+	std::vector<Vec3f> _gradient;
+	int _gradientGridx, _gradientGridy, _gradientGridz;
 
     std::vector<std::shared_ptr<Bsdf>> _bsdfs;
 
@@ -113,6 +117,9 @@ public:
     virtual int numBsdfs() const override;
     virtual std::shared_ptr<Bsdf> &bsdf(int index) override;
     virtual void setBsdf(int index, std::shared_ptr<Bsdf> &bsdf) override;
+#if DEBUG_TRIANGLE_FRAME
+	virtual void setupTangentFrame(const IntersectionTemporary &data, const IntersectionInfo &info, TangentFrame &dst) const override;
+#endif
 
     virtual Primitive *clone() override;
 
